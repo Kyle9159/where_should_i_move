@@ -66,9 +66,14 @@ export const authOptions: NextAuthOptions = {
 			return token;
 		},
 		async session({ session, token }) {
-			if (session.user) {
+			if (session.user && token.id) {
 				session.user.id = token.id as string;
-				session.user.tier = (token.tier as string) ?? "free";
+				// Re-fetch tier from DB so Stripe upgrades reflect on next page load
+				const dbUser = await db.query.users.findFirst({
+					where: (u, { eq }) => eq(u.id, token.id as string),
+					columns: { tier: true },
+				});
+				session.user.tier = dbUser?.tier ?? "free";
 			}
 			return session;
 		},

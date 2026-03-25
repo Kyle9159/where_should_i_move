@@ -2,12 +2,13 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useEffect } from "react";
-import { Heart, Trash2, Map, Sparkles, BarChart3, LogOut, ArrowRight } from "lucide-react";
+import { useEffect, useState, Suspense } from "react";
+import { Heart, Trash2, LogOut, ArrowRight, Sparkles, CreditCard, Check } from "lucide-react";
 import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
-import { formatCurrency } from "@/lib/utils";
+import { UpgradeButton } from "@/components/shared/UpgradeButton";
+import { PremiumBadge } from "@/components/shared/PremiumGate";
 
 interface SavedCity {
 	id: string;
@@ -26,12 +27,16 @@ interface SavedCity {
 	};
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
 	const { data: session, status } = useSession();
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const queryClient = useQueryClient();
+	const [billingLoading, setBillingLoading] = useState(false);
 
-	// Redirect to sign-in if not authenticated
+	const justUpgraded = searchParams.get("upgraded") === "1";
+	const isPremium = session?.user?.tier === "premium";
+
 	useEffect(() => {
 		if (status === "unauthenticated") {
 			router.push("/auth/signin?callbackUrl=/dashboard");
@@ -59,6 +64,17 @@ export default function DashboardPage() {
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["saved-cities"] }),
 	});
 
+	async function handleManageBilling() {
+		setBillingLoading(true);
+		try {
+			const res = await fetch("/api/stripe/portal", { method: "POST" });
+			const data = await res.json() as { url?: string };
+			if (data.url) window.location.href = data.url;
+		} finally {
+			setBillingLoading(false);
+		}
+	}
+
 	if (status === "loading" || status === "unauthenticated") {
 		return (
 			<div className="min-h-screen flex items-center justify-center" style={{ background: "var(--color-background)", color: "var(--color-muted)" }}>
@@ -75,7 +91,8 @@ export default function DashboardPage() {
 					<span style={{ color: "var(--color-accent)" }}>Next</span>Home USA
 				</Link>
 				<div className="flex items-center gap-4">
-					<span className="text-sm" style={{ color: "var(--color-muted)" }}>
+					{isPremium && <PremiumBadge />}
+					<span className="text-sm hidden sm:inline" style={{ color: "var(--color-muted)" }}>
 						{session?.user?.email}
 					</span>
 					<button
@@ -90,12 +107,54 @@ export default function DashboardPage() {
 			</header>
 
 			<div className="max-w-5xl mx-auto px-6 py-8">
+				{/* Upgrade success banner */}
+				{justUpgraded && (
+					<div
+						className="flex items-center gap-3 rounded-2xl p-4 mb-8"
+						style={{ background: "oklch(16% 0.06 160)", border: "1px solid oklch(45% 0.15 160)" }}
+					>
+						<div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+							<Check size={14} className="text-emerald-400" />
+						</div>
+						<div>
+							<p className="font-semibold text-sm text-emerald-400">Welcome to Premium!</p>
+							<p className="text-xs" style={{ color: "var(--color-muted)" }}>
+								You now have access to Surprise Me AI recommendations, unlimited saves, and PDF reports.
+							</p>
+						</div>
+					</div>
+				)}
+
 				{/* Welcome */}
-				<div className="mb-8">
-					<h1 className="text-2xl font-bold">My Move Plan</h1>
-					<p className="text-sm mt-1" style={{ color: "var(--color-muted)" }}>
-						Your saved cities and research hub
-					</p>
+				<div className="flex items-start justify-between mb-8 gap-4">
+					<div>
+						<h1 className="text-2xl font-bold">My Move Plan</h1>
+						<p className="text-sm mt-1" style={{ color: "var(--color-muted)" }}>
+							Your saved cities and research hub
+						</p>
+					</div>
+
+					{/* Subscription controls */}
+					{isPremium ? (
+						<button
+							type="button"
+							onClick={handleManageBilling}
+							disabled={billingLoading}
+							className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl border shrink-0 transition-colors hover:border-[var(--color-accent)] disabled:opacity-60"
+							style={{ borderColor: "var(--color-border)", color: "var(--color-muted)" }}
+						>
+							<CreditCard size={12} />
+							{billingLoading ? "Loading…" : "Manage Billing"}
+						</button>
+					) : (
+						<Link
+							href="/upgrade"
+							className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl border shrink-0 transition-colors hover:border-[var(--color-accent)]"
+							style={{ borderColor: "var(--color-border)", color: "var(--color-accent)" }}
+						>
+							<Sparkles size={12} /> Upgrade
+						</Link>
+					)}
 				</div>
 
 				{/* Quick action cards */}
@@ -116,6 +175,25 @@ export default function DashboardPage() {
 						</Link>
 					))}
 				</div>
+
+				{/* Upgrade nudge for free users */}
+				{!isPremium && (
+					<div
+						className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl p-5 mb-8"
+						style={{ background: "oklch(14% 0.06 220)", border: "1px solid oklch(30% 0.08 220)" }}
+					>
+						<div className="flex items-center gap-3">
+							<Sparkles size={18} style={{ color: "var(--color-accent)" }} />
+							<div>
+								<p className="font-semibold text-sm">Unlock Premium — $9/mo</p>
+								<p className="text-xs" style={{ color: "var(--color-muted)" }}>
+									Surprise Me AI, unlimited saves, PDF reports
+								</p>
+							</div>
+						</div>
+						<UpgradeButton label="Upgrade →" className="shrink-0 px-4 py-2 text-xs" />
+					</div>
+				)}
 
 				{/* Saved cities */}
 				<div>
@@ -173,6 +251,18 @@ export default function DashboardPage() {
 				</div>
 			</div>
 		</main>
+	);
+}
+
+export default function DashboardPage() {
+	return (
+		<Suspense fallback={
+			<div className="min-h-screen flex items-center justify-center" style={{ background: "var(--color-background)", color: "var(--color-muted)" }}>
+				Loading…
+			</div>
+		}>
+			<DashboardContent />
+		</Suspense>
 	);
 }
 

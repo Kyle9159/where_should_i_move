@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { QueryProvider } from "@/lib/query-client";
 import { AuthProvider } from "@/lib/session-provider";
 import "./globals.css";
@@ -15,6 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://nexthomeusa.com";
+const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 export const metadata: Metadata = {
 	metadataBase: new URL(appUrl),
@@ -48,6 +50,19 @@ export default function RootLayout({
 				<AuthProvider>
 					<QueryProvider>{children}</QueryProvider>
 				</AuthProvider>
+
+				{/* Google Analytics — only loads when NEXT_PUBLIC_GA_MEASUREMENT_ID is set */}
+				{gaId && (
+					<>
+						<Script
+							src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+							strategy="afterInteractive"
+						/>
+						<Script id="gtag-init" strategy="afterInteractive">
+							{`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${gaId}');`}
+						</Script>
+					</>
+				)}
 			</body>
 		</html>
 	);
