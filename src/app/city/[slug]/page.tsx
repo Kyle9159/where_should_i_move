@@ -1,12 +1,59 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { ArrowLeft, MapPin, Users, Home, TrendingUp, Shield, GraduationCap, CloudSun, Footprints } from "lucide-react";
 import { db } from "@/db";
 import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
+import { AISummary } from "@/components/city/AISummary";
+import { SaveCityButton } from "@/components/shared/SaveCityButton";
+import { NeighborhoodCards } from "@/components/city/NeighborhoodCards";
 import { formatCurrency, formatNumber, formatPct, scoreToGrade, scoreToColor } from "@/lib/utils";
 
 interface Props {
 	params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+	const { slug } = await params;
+	const city = await db.query.cities.findFirst({
+		where: (c, { eq }) => eq(c.slug, slug),
+		with: { state: true, housing: true, jobs: true, climate: true },
+	});
+	if (!city) return { title: "City Not Found — NextHome USA" };
+
+	const price = city.housing?.medianHomePrice
+		? `Median home $${Math.round(city.housing.medianHomePrice / 1000)}k.`
+		: "";
+	const income = city.jobs?.medianHouseholdIncome
+		? `Median income $${Math.round(city.jobs.medianHouseholdIncome / 1000)}k.`
+		: "";
+	const sunny = city.climate?.sunnyDaysPerYear
+		? `${city.climate.sunnyDaysPerYear} sunny days/year.`
+		: "";
+
+	const description = `Thinking of moving to ${city.name}, ${city.state?.name}? ${price} ${income} ${sunny} Full relocation guide with schools, safety, jobs, and more.`.trim();
+
+	const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3010";
+	const ogImage = city.heroImageUrl ?? `${appUrl}/og-default.png`;
+
+	return {
+		title: `${city.name}, ${city.state?.abbreviation ?? city.stateId} — Relocation Guide | NextHome USA`,
+		description,
+		openGraph: {
+			title: `Move to ${city.name}, ${city.state?.abbreviation ?? city.stateId}?`,
+			description,
+			url: `${appUrl}/city/${slug}`,
+			images: [{ url: ogImage, width: 1200, height: 630, alt: `${city.name} skyline` }],
+			type: "article",
+		},
+		twitter: {
+			card: "summary_large_image",
+			title: `${city.name}, ${city.state?.abbreviation ?? city.stateId} — Relocation Guide`,
+			description,
+			images: [ogImage],
+		},
+		alternates: { canonical: `${appUrl}/city/${slug}` },
+	};
 }
 
 async function getCity(slug: string) {
@@ -43,9 +90,27 @@ export default async function CityPage({ params }: Props) {
 	const fs = city.filterScores;
 
 	const score = Math.round(city.overallScore ?? 50);
+	const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://nexthomeusa.com";
+
+	const jsonLd = {
+		"@context": "https://schema.org",
+		"@type": "Place",
+		name: `${city.name}, ${city.state?.abbreviation ?? city.stateId}`,
+		description: `Relocation guide for ${city.name}, ${city.state?.name}. Population ${city.population?.toLocaleString() ?? "N/A"}.`,
+		url: `${appUrl}/city/${city.slug}`,
+		...(city.lat && city.lng && {
+			geo: { "@type": "GeoCoordinates", latitude: city.lat, longitude: city.lng },
+		}),
+		containedInPlace: {
+			"@type": "AdministrativeArea",
+			name: city.state?.name,
+			containedInPlace: { "@type": "Country", name: "United States" },
+		},
+	};
 
 	return (
 		<main className="min-h-screen" style={{ background: "var(--color-background)" }}>
+			<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 			{/* Hero */}
 			<div
 				className="relative h-72 sm:h-96 flex items-end"
@@ -55,15 +120,19 @@ export default async function CityPage({ params }: Props) {
 				<div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
 				{/* Back button */}
-				<Link
-					href="/explore"
-					className="absolute top-6 left-6 flex items-center gap-2 text-sm glass px-3 py-2 rounded-xl transition-colors hover:border-[var(--color-accent)]"
-				>
-					<ArrowLeft size={16} /> Explore
-				</Link>
-
-				{/* Score badge */}
-				<MatchScoreBadge score={score} size="lg" className="absolute top-6 right-6" />
+				{/* Nav overlay */}
+				<div className="absolute top-6 left-6 right-6 flex items-center justify-between z-10">
+					<Link
+						href="/explore"
+						className="flex items-center gap-2 text-sm glass px-3 py-2 rounded-xl transition-colors hover:border-[var(--color-accent)]"
+					>
+						<ArrowLeft size={14} /> Explore
+					</Link>
+					<div className="flex items-center gap-2">
+						<SaveCityButton cityId={city.id} cityName={city.name} />
+						<MatchScoreBadge score={score} size="md" />
+					</div>
+				</div>
 
 				<div className="relative p-8">
 					<div className="flex items-center gap-2 text-sm mb-2" style={{ color: "var(--color-muted)" }}>
@@ -110,6 +179,9 @@ export default async function CityPage({ params }: Props) {
 						))}
 					</div>
 				</div>
+
+				{/* AI Summary */}
+				<AISummary slug={city.slug} cityName={city.name} />
 
 				{/* Two-column layout */}
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

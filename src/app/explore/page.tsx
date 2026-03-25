@@ -1,15 +1,14 @@
 "use client";
 
-import { useState, useCallback, Suspense } from "react";
+import { useState, useCallback, Suspense, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { SlidersHorizontal, X, ChevronRight, ArrowUpDown } from "lucide-react";
+import { SlidersHorizontal, X, ChevronRight, Share2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { decodeWeights, encodeWeights, type FilterWeights } from "@/lib/ranking";
 import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
 import { CompareBar, CompareButton } from "@/components/shared/CompareBar";
-import { formatCurrency } from "@/lib/utils";
 import { US_STATES, CITY_TIERS } from "@/lib/constants";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -48,13 +47,39 @@ function ExploreInner() {
 	const searchParams = useSearchParams();
 	const router = useRouter();
 
+	// Initialize all filter state from URL params
 	const initialWeights = searchParams.get("weights") ? decodeWeights(searchParams.get("weights")!) : {};
+	const initialStates = searchParams.getAll("states");
+	const initialTiers = searchParams.getAll("tiers");
+	const initialSort = (searchParams.get("sort") ?? "match") as "match" | "population" | "name";
+
 	const [weights, setWeights] = useState<FilterWeights>(initialWeights);
-	const [selectedStates, setSelectedStates] = useState<string[]>([]);
-	const [selectedTiers, setSelectedTiers] = useState<string[]>([]);
-	const [sortBy, setSortBy] = useState<"match" | "population" | "name">("match");
+	const [selectedStates, setSelectedStates] = useState<string[]>(initialStates);
+	const [selectedTiers, setSelectedTiers] = useState<string[]>(initialTiers);
+	const [sortBy, setSortBy] = useState<"match" | "population" | "name">(initialSort);
 	const [page, setPage] = useState(1);
 	const [sidebarOpen, setSidebarOpen] = useState(false);
+	const [shareCopied, setShareCopied] = useState(false);
+
+	// Sync filter state → URL (replaceState so back button works)
+	useEffect(() => {
+		const p = new URLSearchParams();
+		for (const s of selectedStates) p.append("states", s);
+		for (const t of selectedTiers) p.append("tiers", t);
+		if (Object.keys(weights).length > 0) p.set("weights", encodeWeights(weights));
+		if (sortBy !== "match") p.set("sort", sortBy);
+		const qs = p.toString();
+		const url = qs ? `/explore?${qs}` : "/explore";
+		window.history.replaceState(null, "", url);
+	}, [selectedStates, selectedTiers, weights, sortBy]);
+
+	function handleShare() {
+		const url = window.location.href;
+		navigator.clipboard.writeText(url).then(() => {
+			setShareCopied(true);
+			setTimeout(() => setShareCopied(false), 2000);
+		});
+	}
 
 	const buildQueryParams = useCallback(() => {
 		const params = new URLSearchParams();
@@ -252,6 +277,16 @@ function ExploreInner() {
 						<span className="text-xs hidden sm:block" style={{ color: "var(--color-muted)" }}>
 							{data?.total ?? "…"} cities
 						</span>
+						<button
+							type="button"
+							onClick={handleShare}
+							className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors"
+							style={{ borderColor: "var(--color-border)", color: shareCopied ? "var(--color-accent)" : "var(--color-muted)" }}
+							title="Copy shareable link"
+						>
+							{shareCopied ? <Check size={12} /> : <Share2 size={12} />}
+							<span className="hidden sm:inline">{shareCopied ? "Copied!" : "Share"}</span>
+						</button>
 						<select
 							value={sortBy}
 							onChange={(e) => setSortBy(e.target.value as typeof sortBy)}

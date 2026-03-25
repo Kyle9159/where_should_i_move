@@ -386,6 +386,8 @@ export const users = sqliteTable("users", {
 	email: text("email").unique(),
 	name: text("name"),
 	avatarUrl: text("avatar_url"),
+	passwordHash: text("password_hash"), // bcrypt hash — null for OAuth-only users
+	provider: text("provider").default("credentials"), // "credentials" | "google"
 	tier: text("tier").notNull().default("free"), // "free"|"premium"
 	stripeCustomerId: text("stripe_customer_id"),
 	stripePriceId: text("stripe_price_id"),

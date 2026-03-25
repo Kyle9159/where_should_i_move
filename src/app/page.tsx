@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Map, BarChart3, Sparkles, Shield, TreePine, DollarSign } from "lucide-react";
 import { db } from "@/db";
+import { AuthNav } from "@/components/layout/AuthNav";
 
 async function getHeroCities() {
 	return db.query.cities.findMany({
@@ -39,9 +40,13 @@ export default async function LandingPage() {
 					<Link href="/explore" className="text-sm transition-colors hover:text-white hidden sm:inline" style={{ color: "var(--color-muted)" }}>
 						Explore
 					</Link>
+					<Link href="/map" className="text-sm transition-colors hover:text-white hidden sm:inline" style={{ color: "var(--color-muted)" }}>
+						Map
+					</Link>
 					<Link href="/surprise" className="text-sm transition-colors hover:text-white hidden sm:inline" style={{ color: "var(--color-muted)" }}>
 						Surprise Me
 					</Link>
+					<AuthNav />
 					<Link
 						href="/quiz"
 						className="text-sm px-4 py-1.5 rounded-full font-semibold transition-all hover:brightness-110"

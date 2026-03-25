@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { QueryProvider } from "@/lib/query-client";
+import { AuthProvider } from "@/lib/session-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,11 +14,24 @@ const geistMono = Geist_Mono({
 	subsets: ["latin"],
 });
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://nexthomeusa.com";
+
 export const metadata: Metadata = {
-	title: "NextHome USA — Find Where You Belong",
+	metadataBase: new URL(appUrl),
+	title: {
+		default: "NextHome USA — Find Where You Belong",
+		template: "%s | NextHome USA",
+	},
 	description:
-		"Intelligent US relocation research. Compare 55+ filters, AI-powered quiz, and ranked city results to find your perfect new home.",
-	keywords: ["relocation", "moving", "best cities to live", "cost of living", "city comparison"],
+		"Intelligent US relocation research. Compare 55+ filters, AI-powered quiz, and ranked city results across 1,000 US cities. Find your perfect new home.",
+	keywords: ["relocation", "moving", "best cities to live", "cost of living", "city comparison", "where to move"],
+	openGraph: {
+		type: "website",
+		siteName: "NextHome USA",
+		title: "NextHome USA — Find Where You Belong",
+		description: "AI-powered US city comparison. 55+ filters, 1,000 cities, personalized rankings.",
+	},
+	twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({
@@ -31,7 +45,9 @@ export default function RootLayout({
 			className={`${geistSans.variable} ${geistMono.variable} h-full`}
 		>
 			<body className="min-h-full flex flex-col bg-[var(--color-background)] text-[var(--color-foreground)] antialiased">
-				<QueryProvider>{children}</QueryProvider>
+				<AuthProvider>
+					<QueryProvider>{children}</QueryProvider>
+				</AuthProvider>
 			</body>
 		</html>
 	);

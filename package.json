@@ -13,7 +13,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "npx tsx src/db/seed.ts",
     "db:seed:expanded": "npx tsx src/db/seed-expanded.ts",
-    "db:seed:photos": "npx tsx src/db/seed-photos.ts"
+    "db:seed:photos": "npx tsx src/db/seed-photos.ts",
+    "db:seed:summaries": "npx tsx src/db/seed-summaries.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
