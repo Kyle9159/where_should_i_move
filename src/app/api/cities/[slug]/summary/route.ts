@@ -110,10 +110,10 @@ Use plain English, no markdown, no bullet points. Write directly to the reader (
 		expiresAt.setDate(expiresAt.getDate() + TTL_DAYS);
 
 		// Upsert (delete old + insert new)
-		await db.delete(aiSummaries).where(
+		await (db as any).delete(aiSummaries).where(
 			and(eq(aiSummaries.cityId, city.id), eq(aiSummaries.summaryType, "overview")),
 		);
-		await db.insert(aiSummaries).values({
+		await (db as any).insert(aiSummaries).values({
 			id: createId(),
 			cityId: city.id,
 			summaryType: "overview",

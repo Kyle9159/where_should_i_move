@@ -40,7 +40,7 @@ export const authOptions: NextAuthOptions = {
 					if (existing) return null; // email taken
 					const hash = await bcrypt.hash(credentials.password, 12);
 					const id = createId();
-					await db.insert(users).values({ id, email, passwordHash: hash, name: email.split("@")[0] });
+					await (db as any).insert(users).values({ id, email, passwordHash: hash, name: email.split("@")[0] });
 					return { id, email, name: email.split("@")[0], tier: "free" } as User & { tier: string };
 				}
 

@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 	const { cityId, notes } = await req.json() as { cityId: string; notes?: string };
 	if (!cityId) return NextResponse.json({ error: "cityId required" }, { status: 400 });
 
-	await db
+	await (db as any)
 		.insert(savedCities)
 		.values({ id: createId(), userId: session.user.id, cityId, notes })
 		.onConflictDoNothing();
@@ -46,7 +46,7 @@ export async function DELETE(req: NextRequest) {
 	const { cityId } = await req.json() as { cityId: string };
 	if (!cityId) return NextResponse.json({ error: "cityId required" }, { status: 400 });
 
-	await db.delete(savedCities).where(
+	await (db as any).delete(savedCities).where(
 		and(eq(savedCities.userId, session.user.id), eq(savedCities.cityId, cityId)),
 	);
 

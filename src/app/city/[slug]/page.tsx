@@ -70,6 +70,7 @@ async function getCity(slug: string) {
 			demographics: true,
 			lifestyle: true,
 			filterScores: true,
+			neighborhoods: true,
 		},
 	});
 }
@@ -276,6 +277,9 @@ export default async function CityPage({ params }: Props) {
 						)}
 					</div>
 				)}
+
+				{/* Neighborhoods */}
+				<NeighborhoodCards neighborhoods={city.neighborhoods ?? []} cityName={city.name} />
 			</div>
 		</main>
 	);
