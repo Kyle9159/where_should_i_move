@@ -23,8 +23,9 @@ const dbUrl = process.env.DATABASE_URL?.replace("file:", "") ?? "./nexthome.db";
 const sqlite = new Database(dbUrl);
 const db = drizzle(sqlite, { schema });
 
-const LIMIT = parseInt(process.env.PHOTO_LIMIT ?? "200", 10); // top N cities
-const DELAY_MS = 1500; // ~40 req/min → safe for 50 req/hr demo tier
+const LIMIT = parseInt(process.env.PHOTO_LIMIT ?? "1000", 10); // top N cities
+// 50 req/hr demo tier → 1 request per 72s. Use DELAY_MS env to override for production keys (5000/hr → 720ms).
+const DELAY_MS = parseInt(process.env.DELAY_MS ?? "73000", 10);
 
 async function sleep(ms: number) {
 	return new Promise((r) => setTimeout(r, ms));
@@ -45,7 +46,9 @@ async function main() {
 	});
 
 	const needsPhotos = cities.filter((c) => c.photos.length === 0);
-	console.log(`📸 Fetching Unsplash photos for ${needsPhotos.length} cities (${LIMIT} total, ${cities.length - needsPhotos.length} already have photos)...`);
+	const etaHours = ((needsPhotos.length * DELAY_MS) / 1000 / 3600).toFixed(1);
+	console.log(`📸 Fetching photos for ${needsPhotos.length} cities (${cities.length - needsPhotos.length} already done)`);
+	console.log(`⏱  Delay: ${DELAY_MS / 1000}s/city → ETA: ~${etaHours} hours`);
 
 	let fetched = 0;
 	let failed = 0;
@@ -55,6 +58,7 @@ async function main() {
 
 		if (photos.length === 0) {
 			failed++;
+			console.log(`[${fetched + failed}/${needsPhotos.length}] ${city.name}, ${city.stateId} ❌  no results`);
 			await sleep(DELAY_MS);
 			continue;
 		}
@@ -89,9 +93,8 @@ async function main() {
 		}
 
 		fetched++;
-		if (fetched % 10 === 0) {
-			process.stdout.write(`\r  ✓ ${fetched} cities fetched...`);
-		}
+		const pct = Math.round((fetched / needsPhotos.length) * 100);
+		console.log(`[${fetched}/${needsPhotos.length}] ${city.name}, ${city.stateId} ✅  (${pct}%)`);
 
 		await sleep(DELAY_MS);
 	}

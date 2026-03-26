@@ -10,6 +10,7 @@ import { NeighborhoodCards } from "@/components/city/NeighborhoodCards";
 import { ReviewsList } from "@/components/city/ReviewsList";
 import { ReviewForm } from "@/components/city/ReviewForm";
 import { DownloadReportButton } from "@/components/city/DownloadReportButton";
+import { RedditSentiment } from "@/components/city/RedditSentiment";
 import { formatCurrency, formatNumber, formatPct, scoreToGrade, scoreToColor } from "@/lib/utils";
 
 interface Props {
@@ -295,6 +296,15 @@ export default async function CityPage({ params }: Props) {
 						</h3>
 						<ReviewForm slug={city.slug} />
 					</div>
+				</div>
+
+				{/* Reddit Community Sentiment */}
+				<div className="glass rounded-2xl p-6 space-y-4">
+					<div className="flex items-center gap-2">
+						<h2 className="font-bold text-lg">Community Buzz</h2>
+						<span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(255,69,0,0.15)", color: "#ff4500" }}>Reddit</span>
+					</div>
+					<RedditSentiment slug={city.slug} cityName={city.name} />
 				</div>
 			</div>
 		</main>

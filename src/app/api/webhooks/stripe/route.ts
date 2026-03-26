@@ -6,6 +6,11 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
+import {
+	sendSubscriptionConfirmedEmail,
+	sendSubscriptionCancelledEmail,
+	sendPaymentFailedEmail,
+} from "@/lib/email";
 
 // Raw body is required for Stripe signature verification
 export const dynamic = "force-dynamic";
@@ -38,9 +43,18 @@ export async function POST(req: NextRequest) {
 						tier: "premium",
 						stripeCustomerId: session.customer as string,
 						subscriptionStatus: "active",
-						stripePriceId: null, // will be set by subscription.updated
+						stripePriceId: null,
 					})
 					.where(eq(users.id, userId));
+				// Send premium welcome email
+				const newUser = await db.query.users.findFirst({
+					where: (u, { eq }) => eq(u.id, userId),
+					columns: { email: true, name: true },
+				});
+				if (newUser?.email) {
+					const planLabel = (session.amount_total ?? 0) >= 7900 ? "Yearly Premium ($79/yr)" : "Monthly Premium ($9/mo)";
+					sendSubscriptionConfirmedEmail(newUser.email, newUser.name ?? "", planLabel).catch(() => {});
+				}
 				break;
 			}
 
@@ -73,15 +87,20 @@ export async function POST(req: NextRequest) {
 				const userId = sub.metadata?.userId;
 				if (!userId) break;
 
+				const endsAt = sub.cancel_at
+					? new Date(sub.cancel_at * 1000).toISOString()
+					: new Date().toISOString();
 				await (db as any).update(users)
-					.set({
-						tier: "free",
-						subscriptionStatus: "canceled",
-						subscriptionEndsAt: sub.cancel_at
-							? new Date(sub.cancel_at * 1000).toISOString()
-							: new Date().toISOString(),
-					})
+					.set({ tier: "free", subscriptionStatus: "canceled", subscriptionEndsAt: endsAt })
 					.where(eq(users.id, userId));
+				// Cancellation email
+				const cancelledUser = await db.query.users.findFirst({
+					where: (u, { eq }) => eq(u.id, userId),
+					columns: { email: true, name: true },
+				});
+				if (cancelledUser?.email) {
+					sendSubscriptionCancelledEmail(cancelledUser.email, cancelledUser.name ?? "", new Date(endsAt).toLocaleDateString()).catch(() => {});
+				}
 				break;
 			}
 
@@ -97,6 +116,14 @@ export async function POST(req: NextRequest) {
 					await (db as any).update(users)
 						.set({ subscriptionStatus: "past_due" })
 						.where(eq(users.id, user.id));
+					// Payment failed email
+					const failedUser = await db.query.users.findFirst({
+						where: (u, { eq }) => eq(u.id, user.id),
+						columns: { email: true, name: true },
+					});
+					if (failedUser?.email) {
+						sendPaymentFailedEmail(failedUser.email, failedUser.name ?? "").catch(() => {});
+					}
 				}
 				break;
 			}

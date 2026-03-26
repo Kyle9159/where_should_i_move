@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
+import { sendWelcomeEmail } from "@/lib/email";
 
 // Extend session to carry user id and tier
 declare module "next-auth" {
@@ -40,8 +41,11 @@ export const authOptions: NextAuthOptions = {
 					if (existing) return null; // email taken
 					const hash = await bcrypt.hash(credentials.password, 12);
 					const id = createId();
-					await (db as any).insert(users).values({ id, email, passwordHash: hash, name: email.split("@")[0] });
-					return { id, email, name: email.split("@")[0], tier: "free" } as User & { tier: string };
+					const name = email.split("@")[0];
+					await (db as any).insert(users).values({ id, email, passwordHash: hash, name });
+					// Fire-and-forget welcome email
+					sendWelcomeEmail(email, name).catch(() => {});
+					return { id, email, name, tier: "free" } as User & { tier: string };
 				}
 
 				// sign-in

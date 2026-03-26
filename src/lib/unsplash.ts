@@ -22,6 +22,19 @@ interface UnsplashSearchResult {
 
 const BASE = "https://api.unsplash.com";
 
+const STATE_NAMES: Record<string, string> = {
+	AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",
+	CO:"Colorado",CT:"Connecticut",DE:"Delaware",DC:"Washington DC",FL:"Florida",
+	GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",
+	KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",
+	MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",
+	MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",
+	NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",
+	OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",
+	SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",
+	VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming",
+};
+
 /**
  * Search for city photos. Returns up to `perPage` results.
  * Uses the Access Key as the Authorization header.
@@ -34,28 +47,37 @@ export async function searchCityPhotos(
 	const key = process.env.UNSPLASH_ACCESS_KEY;
 	if (!key) return [];
 
-	const query = `${cityName} ${stateId} city skyline`;
+	const stateName = STATE_NAMES[stateId] ?? stateId;
+	// Try 2 queries max (each counts against rate limit).
+	// Most cities succeed on query 1; query 2 is a broader fallback.
+	const queries = [
+		`${cityName} ${stateName} city`,
+		`${cityName} ${stateName}`,
+	];
 
-	const url = new URL(`${BASE}/search/photos`);
-	url.searchParams.set("query", query);
-	url.searchParams.set("per_page", String(perPage));
-	url.searchParams.set("orientation", "landscape");
-	url.searchParams.set("content_filter", "high");
+	for (const query of queries) {
+		const url = new URL(`${BASE}/search/photos`);
+		url.searchParams.set("query", query);
+		url.searchParams.set("per_page", String(perPage));
+		url.searchParams.set("orientation", "landscape");
+		url.searchParams.set("content_filter", "high");
 
-	try {
-		const res = await fetch(url.toString(), {
-			headers: { Authorization: `Client-ID ${key}` },
-			signal: AbortSignal.timeout(8000),
-			next: { revalidate: 86400 }, // Next.js cache for 24h
-		});
+		try {
+			const res = await fetch(url.toString(), {
+				headers: { Authorization: `Client-ID ${key}` },
+				signal: AbortSignal.timeout(8000),
+			});
 
-		if (!res.ok) return [];
+			if (!res.ok) return [];
 
-		const data = await res.json() as UnsplashSearchResult;
-		return data.results ?? [];
-	} catch {
-		return [];
+			const data = (await res.json()) as UnsplashSearchResult;
+			if (data.results?.length > 0) return data.results;
+		} catch {
+			return [];
+		}
 	}
+
+	return [];
 }
 
 /**

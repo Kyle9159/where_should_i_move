@@ -316,22 +316,45 @@ function ExploreInner() {
 						<SlidersHorizontal size={16} /> Filters
 					</button>
 
-					<div className="flex-1 flex items-center gap-2 flex-wrap">
-						{selectedStates.length > 0 && (
-							<div className="flex items-center gap-1 flex-wrap">
-								{selectedStates.map((s) => (
-									<span
-										key={s}
-										className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
-										style={{ background: "var(--color-surface-2)", color: "var(--color-foreground)" }}
-									>
-										{s}
-										<button type="button" onClick={() => setSelectedStates((p) => p.filter((x) => x !== s))}>
-											<X size={10} />
-										</button>
-									</span>
-								))}
-							</div>
+					<div className="flex-1 flex items-center gap-1.5 flex-wrap min-w-0 overflow-hidden">
+						{/* State pills */}
+						{selectedStates.map((s) => (
+							<span
+								key={s}
+								className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full shrink-0"
+								style={{ background: "var(--color-surface-2)", color: "var(--color-foreground)" }}
+							>
+								{s}
+								<button type="button" onClick={() => setSelectedStates((p) => p.filter((x) => x !== s))}>
+									<X size={10} />
+								</button>
+							</span>
+						))}
+						{/* Active weight filter pills */}
+						{ACTIVE_FILTER_PILLS(weights).map(({ key, label, icon }) => (
+							<span
+								key={key}
+								className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full shrink-0"
+								style={{ background: "oklch(18% 0.04 220)", border: "1px solid var(--color-accent)", color: "var(--color-accent)" }}
+							>
+								<span>{icon}</span>{label}
+								<button
+									type="button"
+									onClick={() => setWeights((p) => { const n = { ...p }; delete n[key as keyof FilterWeights]; return n; })}
+								>
+									<X size={10} />
+								</button>
+							</span>
+						))}
+						{(selectedStates.length > 0 || Object.keys(weights).length > 0 || selectedTiers.length > 0) && (
+							<button
+								type="button"
+								onClick={() => { setSelectedStates([]); setSelectedTiers([]); setWeights({}); }}
+								className="text-xs px-2 py-0.5 rounded-full shrink-0 transition-opacity hover:opacity-70"
+								style={{ color: "var(--color-muted)" }}
+							>
+								Clear all
+							</button>
 						)}
 					</div>
 
@@ -591,3 +614,20 @@ const FILTER_CATEGORIES = [
 		],
 	},
 ];
+
+// Flat map of all filter keys → {label, icon} for the active pills bar
+const FILTER_LABEL_MAP = Object.fromEntries(
+	FILTER_CATEGORIES.flatMap((cat) => cat.filters.map((f) => [f.key, { label: f.label, icon: f.icon }])),
+);
+
+function ACTIVE_FILTER_PILLS(weights: FilterWeights) {
+	return Object.entries(weights)
+		.filter(([, v]) => (v ?? 0) > 0)
+		.sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0)) // highest weight first
+		.slice(0, 8) // cap at 8 pills so header doesn't overflow
+		.map(([key]) => ({
+			key,
+			label: FILTER_LABEL_MAP[key]?.label ?? key,
+			icon: FILTER_LABEL_MAP[key]?.icon ?? "⚙️",
+		}));
+}

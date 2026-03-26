@@ -2,8 +2,9 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { ArrowLeft, Plus, X, Trophy } from "lucide-react";
+import { ArrowLeft, Plus, X, Trophy, Download, Lock } from "lucide-react";
 import { useComparison } from "@/hooks/useComparison";
 import { formatCurrency, formatPct, scoreToColor } from "@/lib/utils";
 import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
@@ -108,7 +109,32 @@ function CompareInner() {
 	const { cities: compareList } = useComparison();
 	const [cityData, setCityData] = useState<CityDetail[]>([]);
 	const [loading, setLoading] = useState(false);
+	const [pdfLoading, setPdfLoading] = useState(false);
+	const { data: session } = useSession();
+	const isPremium = session?.user?.tier === "premium";
 	const router = useRouter();
+
+	async function downloadCompareReport() {
+		if (!isPremium) { router.push("/upgrade"); return; }
+		setPdfLoading(true);
+		try {
+			const res = await fetch("/api/export/compare-report", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ slugs: cityData.map((c) => c.slug) }),
+			});
+			if (!res.ok) return;
+			const blob = await res.blob();
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = `nexthome-comparison.pdf`;
+			a.click();
+			URL.revokeObjectURL(url);
+		} finally {
+			setPdfLoading(false);
+		}
+	}
 
 	useEffect(() => {
 		if (compareList.length < 2) return;
@@ -154,6 +180,19 @@ function CompareInner() {
 					<ArrowLeft size={16} /> Explore
 				</Link>
 				<h1 className="font-bold">City Comparison</h1>
+				<div className="ml-auto">
+					<button
+						type="button"
+						onClick={downloadCompareReport}
+						disabled={pdfLoading || cityData.length < 2}
+						className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all disabled:opacity-40"
+						style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
+						title={isPremium ? "Download comparison PDF" : "Premium feature"}
+					>
+						{isPremium ? <Download size={12} /> : <Lock size={12} />}
+						{pdfLoading ? "Generating…" : "PDF Report"}
+					</button>
+				</div>
 			</div>
 
 			<div className="max-w-6xl mx-auto px-4 py-8 overflow-x-auto">

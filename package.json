@@ -15,7 +15,10 @@
     "db:seed:expanded": "npx tsx src/db/seed-expanded.ts",
     "db:seed:photos": "npx tsx src/db/seed-photos.ts",
     "db:seed:summaries": "npx tsx src/db/seed-summaries.ts",
-    "db:enrich:climate": "npx tsx src/db/enrich-climate.ts"
+    "db:enrich:climate": "npx tsx src/db/enrich-climate.ts",
+    "db:enrich:walkscore": "npx tsx src/db/enrich-walkscore.ts",
+    "db:enrich:housing": "npx tsx src/db/enrich-housing.ts",
+    "db:enrich:schools": "npx tsx src/db/enrich-schools.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -48,6 +51,7 @@
     "react-hook-form": "^7.72.0",
     "react-leaflet": "^5.0.0",
     "recharts": "^3.8.0",
+    "resend": "^6.9.4",
     "stripe": "^20.4.1",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"
