@@ -393,6 +393,10 @@ export const users = sqliteTable("users", {
 	stripePriceId: text("stripe_price_id"),
 	subscriptionStatus: text("subscription_status"),
 	subscriptionEndsAt: text("subscription_ends_at"),
+	emailVerified: integer("email_verified", { mode: "boolean" }).default(false),
+	emailVerifyToken: text("email_verify_token"),
+	passwordResetToken: text("password_reset_token"),
+	passwordResetExpiresAt: text("password_reset_expires_at"),
 	...timestamps,
 });
 
@@ -601,6 +605,16 @@ export const cityReviewsRelations = relations(cityReviews, ({ one }) => ({
 export const usersRelations = relations(users, ({ many }) => ({
 	reviews: many(cityReviews),
 	savedCities: many(savedCities),
+	savedSearches: many(savedSearches),
+	savedComparisons: many(savedComparisons),
+}));
+
+export const savedSearchesRelations = relations(savedSearches, ({ one }) => ({
+	user: one(users, { fields: [savedSearches.userId], references: [users.id] }),
+}));
+
+export const savedComparisonsRelations = relations(savedComparisons, ({ one }) => ({
+	user: one(users, { fields: [savedComparisons.userId], references: [users.id] }),
 }));
 
 // ---------------------------------------------------------------------------

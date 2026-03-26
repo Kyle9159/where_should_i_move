@@ -11,6 +11,8 @@ import { ReviewsList } from "@/components/city/ReviewsList";
 import { ReviewForm } from "@/components/city/ReviewForm";
 import { DownloadReportButton } from "@/components/city/DownloadReportButton";
 import { RedditSentiment } from "@/components/city/RedditSentiment";
+import { ScoreRadarChart, CostBreakdownChart, ClimateLineChart, DemographicsDonut } from "@/components/city/CityCharts";
+import { ShareButtons } from "@/components/city/ShareButtons";
 import { formatCurrency, formatNumber, formatPct, scoreToGrade, scoreToColor } from "@/lib/utils";
 
 interface Props {
@@ -134,6 +136,7 @@ export default async function CityPage({ params }: Props) {
 						<ArrowLeft size={14} /> Explore
 					</Link>
 					<div className="flex items-center gap-2">
+						<ShareButtons slug={city.slug} cityName={city.name} stateId={city.stateId} score={score} />
 						<DownloadReportButton slug={city.slug} cityName={city.name} />
 						<SaveCityButton cityId={city.id} cityName={city.name} />
 						<MatchScoreBadge score={score} size="md" />
@@ -162,30 +165,69 @@ export default async function CityPage({ params }: Props) {
 					<StatCard icon={CloudSun} label="Sunny Days" value={c?.sunnyDaysPerYear ? `${c.sunnyDaysPerYear}/yr` : "N/A"} />
 				</div>
 
-				{/* Score breakdown */}
+				{/* Score breakdown + radar */}
 				<div className="glass rounded-2xl p-6">
 					<h2 className="font-bold text-sm uppercase tracking-widest mb-4" style={{ color: "var(--color-muted)" }}>
 						Score Breakdown
 					</h2>
-					<div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-						{[
-							{ label: "Essentials", score: fs?.scoreMedianHomePrice, icon: "💰" },
-							{ label: "Lifestyle", score: fs?.scoreWalkability, icon: "🎭" },
-							{ label: "Safety", score: fs?.scoreViolentCrime, icon: "🛡️" },
-							{ label: "Schools", score: fs?.scoreSchoolQuality, icon: "🎓" },
-							{ label: "Climate", score: fs?.scoreWeather, icon: "☀️" },
-						].map((cat) => (
-							<div key={cat.label} className="flex flex-col items-center gap-2 text-center">
-								<span className="text-xl">{cat.icon}</span>
-								<span className="text-xs" style={{ color: "var(--color-muted)" }}>{cat.label}</span>
-								<span className={`text-lg font-bold ${scoreToColor(cat.score)}`}>
-									{cat.score ?? "—"}
-								</span>
-							</div>
-						))}
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+						<div className="grid grid-cols-5 gap-2">
+							{[
+								{ label: "Essentials", score: fs?.scoreMedianHomePrice, icon: "💰" },
+								{ label: "Lifestyle", score: fs?.scoreWalkability, icon: "🎭" },
+								{ label: "Safety", score: fs?.scoreViolentCrime, icon: "🛡️" },
+								{ label: "Schools", score: fs?.scoreSchoolQuality, icon: "🎓" },
+								{ label: "Climate", score: fs?.scoreWeather, icon: "☀️" },
+							].map((cat) => (
+								<div key={cat.label} className="flex flex-col items-center gap-2 text-center">
+									<span className="text-xl">{cat.icon}</span>
+									<span className="text-xs" style={{ color: "var(--color-muted)" }}>{cat.label}</span>
+									<span className={`text-lg font-bold ${scoreToColor(cat.score)}`}>
+										{cat.score ?? "—"}
+									</span>
+								</div>
+							))}
+						</div>
+						{fs && (
+							<ScoreRadarChart
+								essentials={fs.scoreMedianHomePrice ?? 50}
+								lifestyle={fs.scoreWalkability ?? 50}
+								practical={fs.scoreViolentCrime ?? 50}
+								family={fs.scoreSchoolQuality ?? 50}
+								nature={fs.scoreWeather ?? 50}
+							/>
+						)}
 					</div>
 				</div>
 
+				{/* Cost + Climate charts */}
+				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					{(h?.medianHomePrice || h?.medianRent2Bed || j?.medianHouseholdIncome) && (
+						<div className="glass rounded-2xl p-6">
+							<h2 className="font-bold text-sm uppercase tracking-widest mb-4" style={{ color: "var(--color-muted)" }}>
+								Cost vs National Average
+							</h2>
+							<CostBreakdownChart
+								medianHomePrice={h?.medianHomePrice ?? null}
+								medianRent={h?.medianRent2Bed ?? null}
+								medianIncome={j?.medianHouseholdIncome ?? null}
+							/>
+						</div>
+					)}
+					{(c?.avgTempJan && c?.avgTempJul) && (
+						<div className="glass rounded-2xl p-6">
+							<h2 className="font-bold text-sm uppercase tracking-widest mb-4" style={{ color: "var(--color-muted)" }}>
+								Climate Overview
+							</h2>
+							<ClimateLineChart
+								avgTempJan={c.avgTempJan}
+								avgTempJul={c.avgTempJul}
+								sunnyDaysPerYear={c.sunnyDaysPerYear ?? null}
+								avgRainfallInches={c.avgRainfallInches ?? null}
+							/>
+						</div>
+					)}
+				</div>
 				{/* AI Summary */}
 				<AISummary slug={city.slug} cityName={city.name} />
 
@@ -280,6 +322,45 @@ export default async function CityPage({ params }: Props) {
 								<DataRow label="LGBTQ+ Friendliness" value={`${l.lgbtqFriendlyScore} / 100`} />
 							</div>
 						)}
+					</div>
+				)}
+
+				{/* Demographics */}
+				{city.demographics && (city.demographics.pctWhite || city.demographics.pctBlack || city.demographics.pctHispanic) && (
+					<div className="glass rounded-2xl p-6 space-y-5">
+						<h2 className="font-bold text-lg">Demographics</h2>
+						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+							<DemographicsDonut
+								pctWhite={city.demographics.pctWhite ?? null}
+								pctBlack={city.demographics.pctBlack ?? null}
+								pctHispanic={city.demographics.pctHispanic ?? null}
+								pctAsian={city.demographics.pctAsian ?? null}
+								pctOther={city.demographics.pctOther ?? null}
+							/>
+							<div className="space-y-2">
+								{city.demographics.pctCollegeEducated && (
+									<DataRow label="College Educated" value={`${city.demographics.pctCollegeEducated.toFixed(0)}%`} />
+								)}
+								{city.demographics.pctUnder18 && (
+									<DataRow label="Under 18" value={`${city.demographics.pctUnder18.toFixed(0)}%`} />
+								)}
+								{city.demographics.pctOver65 && (
+									<DataRow label="Over 65" value={`${city.demographics.pctOver65.toFixed(0)}%`} />
+								)}
+								{city.demographics.homeownershipRate && (
+									<DataRow label="Homeownership" value={`${city.demographics.homeownershipRate.toFixed(0)}%`} />
+								)}
+								{city.demographics.pctMarried && (
+									<DataRow label="Married Households" value={`${city.demographics.pctMarried.toFixed(0)}%`} />
+								)}
+								{city.demographics.pctForeignBorn && (
+									<DataRow label="Foreign Born" value={`${city.demographics.pctForeignBorn.toFixed(0)}%`} />
+								)}
+								{city.demographics.diversityIndex && (
+									<DataRow label="Diversity Index" value={city.demographics.diversityIndex.toFixed(2)} />
+								)}
+							</div>
+						</div>
 					</div>
 				)}
 

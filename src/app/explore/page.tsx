@@ -290,8 +290,8 @@ function ExploreInner() {
 					)}
 				</div>
 
-				{/* Take quiz CTA */}
-				<div className="p-4 border-t" style={{ borderColor: "var(--color-border)" }}>
+				{/* Take quiz CTA + Save Search */}
+				<div className="p-4 border-t space-y-2" style={{ borderColor: "var(--color-border)" }}>
 					<Link
 						href="/quiz"
 						className="flex items-center justify-between w-full text-xs px-3 py-2.5 rounded-xl transition-all"
@@ -300,6 +300,7 @@ function ExploreInner() {
 						<span>🤖 Take AI Quiz for better results</span>
 						<ChevronRight size={14} />
 					</Link>
+					<SaveSearchButton weights={weights} selectedStates={selectedStates} selectedTiers={selectedTiers} sortBy={sortBy} totalResults={data?.total} />
 				</div>
 			</aside>
 
@@ -630,4 +631,55 @@ function ACTIVE_FILTER_PILLS(weights: FilterWeights) {
 			label: FILTER_LABEL_MAP[key]?.label ?? key,
 			icon: FILTER_LABEL_MAP[key]?.icon ?? "⚙️",
 		}));
+}
+
+// ── Save Search Button ─────────────────────────────────────────────────────
+
+function SaveSearchButton({
+	weights, selectedStates, selectedTiers, sortBy, totalResults,
+}: {
+	weights: FilterWeights;
+	selectedStates: string[];
+	selectedTiers: string[];
+	sortBy: string;
+	totalResults?: number;
+}) {
+	const [saving, setSaving] = useState(false);
+	const [saved, setSaved] = useState(false);
+
+	async function handleSave() {
+		setSaving(true);
+		const filterState = JSON.stringify({
+			weights: encodeWeights(weights),
+			stateIds: selectedStates,
+			tiers: selectedTiers,
+			sortBy,
+		});
+		try {
+			await fetch("/api/users/me/searches", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ filterState, resultCount: totalResults }),
+			});
+			setSaved(true);
+			setTimeout(() => setSaved(false), 2500);
+		} finally {
+			setSaving(false);
+		}
+	}
+
+	const hasFilters = Object.keys(weights).length > 0 || selectedStates.length > 0 || selectedTiers.length > 0;
+	if (!hasFilters) return null;
+
+	return (
+		<button
+			type="button"
+			onClick={handleSave}
+			disabled={saving}
+			className="flex items-center justify-center gap-1.5 w-full text-xs px-3 py-2 rounded-xl transition-all disabled:opacity-50"
+			style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: saved ? "#4ade80" : "var(--color-muted)" }}
+		>
+			{saved ? "✓ Saved to dashboard" : saving ? "Saving…" : "💾 Save this search"}
+		</button>
+	);
 }

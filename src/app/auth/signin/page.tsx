@@ -131,6 +131,13 @@ function SignInForm() {
 						</button>
 					</form>
 
+					{mode === "signin" && (
+						<div className="text-center">
+							<Link href="/auth/forgot-password" className="text-xs" style={{ color: "var(--color-muted)" }}>
+								Forgot your password?
+							</Link>
+						</div>
+					)}
 					<div className="mt-4 pt-4 text-center text-xs" style={{ borderTop: "1px solid var(--color-border)", color: "var(--color-muted)" }}>
 						<Sparkles size={10} className="inline mr-1" style={{ color: "var(--color-accent)" }} />
 						Free account · Save cities · Compare · Get AI recommendations

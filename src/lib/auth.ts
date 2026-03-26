@@ -1,11 +1,14 @@
 import { type NextAuthOptions, type Session, type User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { sendWelcomeEmail } from "@/lib/email";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3010";
 
 // Extend session to carry user id and tier
 declare module "next-auth" {
@@ -42,9 +45,23 @@ export const authOptions: NextAuthOptions = {
 					const hash = await bcrypt.hash(credentials.password, 12);
 					const id = createId();
 					const name = email.split("@")[0];
-					await (db as any).insert(users).values({ id, email, passwordHash: hash, name });
-					// Fire-and-forget welcome email
+					const verifyToken = randomBytes(32).toString("hex");
+					await (db as any).insert(users).values({
+						id, email, passwordHash: hash, name,
+						emailVerifyToken: verifyToken, emailVerified: false,
+					});
 					sendWelcomeEmail(email, name).catch(() => {});
+					if (process.env.RESEND_API_KEY) {
+						const verifyUrl = `${APP_URL}/api/auth/verify-email?token=${verifyToken}`;
+						import("resend").then(({ Resend }) => {
+							new Resend(process.env.RESEND_API_KEY!).emails.send({
+								from: process.env.EMAIL_FROM ?? "NextHome USA <notifications@nexthomeusa.com>",
+								to: email,
+								subject: "Verify your NextHome USA email",
+								html: `<div style="font-family:sans-serif;max-width:500px;margin:40px auto;background:#111;color:#e0e0e0;padding:32px;border-radius:16px;border:1px solid #222"><h2 style="color:#00d4ff;margin-top:0">Verify your email</h2><p>Click below to verify your account.</p><a href="${verifyUrl}" style="display:inline-block;background:#00d4ff;color:#000;padding:12px 24px;border-radius:10px;font-weight:600;text-decoration:none">Verify Email</a></div>`,
+							}).catch(() => {});
+						}).catch(() => {});
+					}
 					return { id, email, name, tier: "free" } as User & { tier: string };
 				}
 

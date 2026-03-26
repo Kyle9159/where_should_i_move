@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { ArrowLeft, Plus, X, Trophy, Download, Lock } from "lucide-react";
+import { ArrowLeft, Plus, X, Trophy, Download, Lock, Bookmark, Check } from "lucide-react";
 import { useComparison } from "@/hooks/useComparison";
 import { formatCurrency, formatPct, scoreToColor } from "@/lib/utils";
 import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
@@ -106,13 +106,45 @@ export default function ComparePage() {
 }
 
 function CompareInner() {
-	const { cities: compareList } = useComparison();
+	const { cities: compareList, add: addToCompare } = useComparison();
+	const searchParams = useSearchParams();
 	const [cityData, setCityData] = useState<CityDetail[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [pdfLoading, setPdfLoading] = useState(false);
+	const [saved, setSaved] = useState(false);
 	const { data: session } = useSession();
 	const isPremium = session?.user?.tier === "premium";
 	const router = useRouter();
+
+	// Handle ?preload=slug1,slug2,slug3 from saved comparisons
+	useEffect(() => {
+		const preload = searchParams.get("preload");
+		if (preload) {
+			const slugs = preload.split(",").filter(Boolean).slice(0, 4);
+			// We need to fetch the city IDs for each slug to add to comparison store
+			fetch("/api/cities/compare", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ cityIds: slugs }),
+			}).then((r) => r.json()).then((d: { cities: CityDetail[] }) => {
+				for (const c of d.cities ?? []) {
+					addToCompare({ id: c.id, slug: c.slug, name: c.name, stateId: c.stateId });
+				}
+			}).catch(() => {});
+		}
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	async function saveComparison() {
+		if (!session?.user) { router.push("/auth/signin"); return; }
+		await fetch("/api/users/me/comparisons", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ cityIds: cityData.map((c) => c.id) }),
+		});
+		setSaved(true);
+		setTimeout(() => setSaved(false), 2500);
+	}
 
 	async function downloadCompareReport() {
 		if (!isPremium) { router.push("/upgrade"); return; }
@@ -180,7 +212,18 @@ function CompareInner() {
 					<ArrowLeft size={16} /> Explore
 				</Link>
 				<h1 className="font-bold">City Comparison</h1>
-				<div className="ml-auto">
+				<div className="ml-auto flex items-center gap-2">
+					{session?.user && cityData.length >= 2 && (
+						<button
+							type="button"
+							onClick={saveComparison}
+							className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all"
+							style={{ borderColor: "var(--color-border)", color: saved ? "#4ade80" : "var(--color-muted)" }}
+						>
+							{saved ? <Check size={12} /> : <Bookmark size={12} />}
+							{saved ? "Saved!" : "Save"}
+						</button>
+					)}
 					<button
 						type="button"
 						onClick={downloadCompareReport}

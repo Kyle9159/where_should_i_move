@@ -18,7 +18,9 @@
     "db:enrich:climate": "npx tsx src/db/enrich-climate.ts",
     "db:enrich:walkscore": "npx tsx src/db/enrich-walkscore.ts",
     "db:enrich:housing": "npx tsx src/db/enrich-housing.ts",
-    "db:enrich:schools": "npx tsx src/db/enrich-schools.ts"
+    "db:enrich:schools": "npx tsx src/db/enrich-schools.ts",
+    "db:enrich:crime": "npx tsx src/db/enrich-crime.ts",
+    "db:enrich:housing": "npx tsx src/db/enrich-housing.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
