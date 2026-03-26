@@ -1,0 +1,39 @@
+{
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "functions": {
+    "src/app/api/export/city-report/route.ts": { "maxDuration": 30 },
+    "src/app/api/export/compare-report/route.ts": { "maxDuration": 30 },
+    "src/app/api/recommendations/surprise/route.ts": { "maxDuration": 30 },
+    "src/app/api/quiz/route.ts": { "maxDuration": 30 },
+    "src/app/api/cities/[slug]/summary/route.ts": { "maxDuration": 20 }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/refresh-aqi",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-photos",
+      "schedule": "0 4 * * 0"
+    },
+    {
+      "path": "/api/cron/refresh-summaries",
+      "schedule": "0 3 1 * *"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Powered-By", "value": "" }
+      ]
+    }
+  ]
+}

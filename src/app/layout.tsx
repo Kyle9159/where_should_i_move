@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { QueryProvider } from "@/lib/query-client";
@@ -34,6 +34,21 @@ export const metadata: Metadata = {
 		description: "AI-powered US city comparison. 55+ filters, 1,000 cities, personalized rankings.",
 	},
 	twitter: { card: "summary_large_image" },
+	manifest: "/manifest.webmanifest",
+	appleWebApp: {
+		capable: true,
+		statusBarStyle: "black-translucent",
+		title: "NextHome USA",
+	},
+	formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+	themeColor: "#00d4ff",
+	colorScheme: "dark",
+	width: "device-width",
+	initialScale: 1,
+	maximumScale: 5,
 };
 
 export default function RootLayout({
