@@ -4,7 +4,7 @@ import { useState, useCallback, Suspense, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { SlidersHorizontal, X, ChevronRight, Share2, Check } from "lucide-react";
+import { SlidersHorizontal, X, ChevronRight, ChevronDown, Share2, Check, Map } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { decodeWeights, encodeWeights, type FilterWeights } from "@/lib/ranking";
 import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
@@ -60,6 +60,17 @@ function ExploreInner() {
 	const [page, setPage] = useState(1);
 	const [sidebarOpen, setSidebarOpen] = useState(false);
 	const [shareCopied, setShareCopied] = useState(false);
+	const [openCategories, setOpenCategories] = useState<Set<string>>(
+		new Set(["essentials", "family"]),
+	);
+
+	function toggleCategory(cat: string) {
+		setOpenCategories((prev) => {
+			const next = new Set(prev);
+			next.has(cat) ? next.delete(cat) : next.add(cat);
+			return next;
+		});
+	}
 
 	// Sync filter state → URL (replaceState so back button works)
 	useEffect(() => {
@@ -116,6 +127,7 @@ function ExploreInner() {
 						<span style={{ color: "var(--color-accent)" }}>Next</span>Home USA
 					</Link>
 					<div className="flex items-center gap-2">
+						<Link href="/map" className="text-xs flex items-center gap-0.5" style={{ color: "var(--color-muted)" }}><Map size={11} /> Map</Link>
 						<Link href="/surprise" className="text-xs" style={{ color: "var(--color-muted)" }}>✦ Surprise</Link>
 						<Link href="/compare" className="text-xs" style={{ color: "var(--color-muted)" }}>⚖️ Compare</Link>
 					</div>
@@ -204,28 +216,78 @@ function ExploreInner() {
 						</div>
 					</div>
 
-					{/* Key weight sliders */}
-					<div>
+					{/* Filter categories */}
+					<div className="space-y-2">
 						<h3 className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--color-muted)" }}>
 							What matters most?
 						</h3>
-						<div className="space-y-4">
-							{KEY_FILTERS.map((f) => (
-								<WeightSlider
-									key={f.key}
-									label={f.label}
-									icon={f.icon}
-									value={((weights[f.key as keyof FilterWeights] ?? 0) * 100)}
-									onChange={(v) =>
-										setWeights((prev) => ({
-											...prev,
-											[f.key]: v / 100,
-										}))
-									}
-								/>
-							))}
-						</div>
+						{FILTER_CATEGORIES.map((cat) => {
+							const isOpen = openCategories.has(cat.id);
+							const activeCount = cat.filters.filter(
+								(f) => (weights[f.key as keyof FilterWeights] ?? 0) > 0,
+							).length;
+							return (
+								<div key={cat.id} className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--color-border)" }}>
+									<button
+										type="button"
+										onClick={() => toggleCategory(cat.id)}
+										className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold transition-colors hover:bg-[var(--color-surface)]"
+										style={{ color: "var(--color-foreground)" }}
+									>
+										<span className="flex items-center gap-2">
+											<span>{cat.icon}</span>
+											<span>{cat.label}</span>
+											{activeCount > 0 && (
+												<span
+													className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+													style={{ background: "var(--color-accent)", color: "#000" }}
+												>
+													{activeCount}
+												</span>
+											)}
+										</span>
+										<ChevronDown
+											size={14}
+											className="transition-transform"
+											style={{
+												transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+												color: "var(--color-muted)",
+											}}
+										/>
+									</button>
+									{isOpen && (
+										<div className="px-3 pb-3 space-y-4 pt-1" style={{ borderTop: "1px solid var(--color-border)" }}>
+											{cat.filters.map((f) => (
+												<WeightSlider
+													key={f.key}
+													label={f.label}
+													icon={f.icon}
+													value={(weights[f.key as keyof FilterWeights] ?? 0) * 100}
+													onChange={(v) =>
+														setWeights((prev) => ({
+															...prev,
+															[f.key]: v / 100,
+														}))
+													}
+												/>
+											))}
+										</div>
+									)}
+								</div>
+							);
+						})}
 					</div>
+
+					{Object.keys(weights).length > 0 && (
+						<button
+							type="button"
+							onClick={() => setWeights({})}
+							className="text-xs w-full py-1.5 rounded-lg transition-colors hover:bg-[var(--color-surface)]"
+							style={{ color: "var(--color-muted)" }}
+						>
+							Reset all filters
+						</button>
+					)}
 				</div>
 
 				{/* Take quiz CTA */}
@@ -450,13 +512,82 @@ function WeightSlider({
 
 // ── Key filters list ──────────────────────────────────────────────────────────
 
-const KEY_FILTERS = [
-	{ key: "scoreMedianHomePrice", label: "Affordability", icon: "💰" },
-	{ key: "scoreJobMarket", label: "Job Market", icon: "💼" },
-	{ key: "scoreViolentCrime", label: "Safety", icon: "🛡️" },
-	{ key: "scoreSchoolQuality", label: "Schools", icon: "🎓" },
-	{ key: "scoreWeather", label: "Climate", icon: "☀️" },
-	{ key: "scoreWalkability", label: "Walkability", icon: "🚶" },
-	{ key: "scoreNearOcean", label: "Near Ocean", icon: "🌊" },
-	{ key: "scoreNearMountains", label: "Near Mountains", icon: "⛰️" },
-] as const;
+// ── Full filter category definitions (43 filters across 5 categories) ────────
+
+const FILTER_CATEGORIES = [
+	{
+		id: "essentials",
+		label: "Essentials",
+		icon: "💰",
+		filters: [
+			{ key: "scoreMedianHomePrice", label: "Affordability", icon: "🏷️" },
+			{ key: "scoreMedianRent", label: "Rent Prices", icon: "🏠" },
+			{ key: "scoreCostOfLiving", label: "Cost of Living", icon: "🛒" },
+			{ key: "scoreJobMarket", label: "Job Market", icon: "💼" },
+			{ key: "scoreUnemployment", label: "Low Unemployment", icon: "📈" },
+			{ key: "scoreMedianIncome", label: "High Income", icon: "💵" },
+			{ key: "scoreTaxBurden", label: "Low Taxes", icon: "🧾" },
+			{ key: "scoreAffordabilityIndex", label: "Overall Affordability", icon: "📊" },
+		],
+	},
+	{
+		id: "lifestyle",
+		label: "Lifestyle",
+		icon: "🎭",
+		filters: [
+			{ key: "scoreWalkability", label: "Walkability", icon: "🚶" },
+			{ key: "scoreTransit", label: "Public Transit", icon: "🚇" },
+			{ key: "scoreBikeability", label: "Bikeability", icon: "🚲" },
+			{ key: "scoreRestaurants", label: "Food Scene", icon: "🍽️" },
+			{ key: "scoreNightlife", label: "Nightlife", icon: "🎉" },
+			{ key: "scoreArtsAndCulture", label: "Arts & Culture", icon: "🎨" },
+			{ key: "scoreDiversity", label: "Diversity", icon: "🌍" },
+			{ key: "scoreLgbtqFriendly", label: "LGBTQ+ Friendly", icon: "🏳️‍🌈" },
+			{ key: "scoreTechHub", label: "Tech Hub", icon: "💻" },
+			{ key: "scoreCollegeTown", label: "College Town", icon: "🎓" },
+		],
+	},
+	{
+		id: "practical",
+		label: "Practical",
+		icon: "🛡️",
+		filters: [
+			{ key: "scoreViolentCrime", label: "Low Violent Crime", icon: "🛡️" },
+			{ key: "scorePropertyCrime", label: "Low Property Crime", icon: "🔒" },
+			{ key: "scoreHealthcare", label: "Healthcare", icon: "🏥" },
+			{ key: "scoreBroadband", label: "Internet Speed", icon: "📡" },
+			{ key: "scorePopulationGrowth", label: "Growth Trajectory", icon: "📈" },
+		],
+	},
+	{
+		id: "family",
+		label: "Family",
+		icon: "👨‍👩‍👧",
+		filters: [
+			{ key: "scoreSchoolQuality", label: "School Quality", icon: "🏫" },
+			{ key: "scoreHighSchool", label: "High Schools", icon: "⭐" },
+			{ key: "scoreGraduationRate", label: "Graduation Rate", icon: "🏆" },
+			{ key: "scoreChildcare", label: "Childcare Access", icon: "👶" },
+			{ key: "scorePupilSpending", label: "School Funding", icon: "📚" },
+		],
+	},
+	{
+		id: "nature",
+		label: "Nature & Climate",
+		icon: "🌿",
+		filters: [
+			{ key: "scoreWeather", label: "Pleasant Weather", icon: "☀️" },
+			{ key: "scoreWarmClimate", label: "Warm Climate", icon: "🌴" },
+			{ key: "scoreAirQuality", label: "Air Quality", icon: "🌿" },
+			{ key: "scoreSunnyDays", label: "Sunny Days", icon: "🌞" },
+			{ key: "scoreNaturalDisasterRisk", label: "Low Disaster Risk", icon: "🌪️" },
+			{ key: "scoreNearOcean", label: "Near Ocean", icon: "🌊" },
+			{ key: "scoreNearMountains", label: "Near Mountains", icon: "⛰️" },
+			{ key: "scoreNearLake", label: "Near Lake / River", icon: "💧" },
+			{ key: "scoreTrails", label: "Hiking & Trails", icon: "🥾" },
+			{ key: "scoreNationalPark", label: "National Parks", icon: "🏞️" },
+			{ key: "scoreGreenSpace", label: "Green Space", icon: "🌳" },
+			{ key: "scoreLowHumidity", label: "Low Humidity", icon: "❄️" },
+		],
+	},
+];

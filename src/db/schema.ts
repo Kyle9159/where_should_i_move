@@ -593,6 +593,16 @@ export const aiSummariesRelations = relations(aiSummaries, ({ one }) => ({
 	city: one(cities, { fields: [aiSummaries.cityId], references: [cities.id] }),
 }));
 
+export const cityReviewsRelations = relations(cityReviews, ({ one }) => ({
+	city: one(cities, { fields: [cityReviews.cityId], references: [cities.id] }),
+	user: one(users, { fields: [cityReviews.userId], references: [users.id] }),
+}));
+
+export const usersRelations = relations(users, ({ many }) => ({
+	reviews: many(cityReviews),
+	savedCities: many(savedCities),
+}));
+
 // ---------------------------------------------------------------------------
 // Types (inferred)
 // ---------------------------------------------------------------------------

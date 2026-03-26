@@ -7,6 +7,9 @@ import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
 import { AISummary } from "@/components/city/AISummary";
 import { SaveCityButton } from "@/components/shared/SaveCityButton";
 import { NeighborhoodCards } from "@/components/city/NeighborhoodCards";
+import { ReviewsList } from "@/components/city/ReviewsList";
+import { ReviewForm } from "@/components/city/ReviewForm";
+import { DownloadReportButton } from "@/components/city/DownloadReportButton";
 import { formatCurrency, formatNumber, formatPct, scoreToGrade, scoreToColor } from "@/lib/utils";
 
 interface Props {
@@ -130,6 +133,7 @@ export default async function CityPage({ params }: Props) {
 						<ArrowLeft size={14} /> Explore
 					</Link>
 					<div className="flex items-center gap-2">
+						<DownloadReportButton slug={city.slug} cityName={city.name} />
 						<SaveCityButton cityId={city.id} cityName={city.name} />
 						<MatchScoreBadge score={score} size="md" />
 					</div>
@@ -280,6 +284,18 @@ export default async function CityPage({ params }: Props) {
 
 				{/* Neighborhoods */}
 				<NeighborhoodCards neighborhoods={city.neighborhoods ?? []} cityName={city.name} />
+
+				{/* Resident Reviews */}
+				<div className="glass rounded-2xl p-6 space-y-6">
+					<h2 className="font-bold text-lg">Resident Reviews</h2>
+					<ReviewsList slug={city.slug} />
+					<div>
+						<h3 className="font-semibold text-sm mb-4" style={{ color: "var(--color-muted)" }}>
+							Write a Review
+						</h3>
+						<ReviewForm slug={city.slug} />
+					</div>
+				</div>
 			</div>
 		</main>
 	);
