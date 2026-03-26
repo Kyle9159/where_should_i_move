@@ -21,6 +21,7 @@
     "db:enrich:housing": "npx tsx src/db/enrich-housing.ts",
     "db:enrich:schools": "npx tsx src/db/enrich-schools.ts",
     "db:enrich:crime": "npx tsx src/db/enrich-crime.ts",
+    "db:enrich:bls": "npx tsx src/db/enrich-bls.ts",
     "db:enrich:housing": "npx tsx src/db/enrich-housing.ts"
   },
   "dependencies": {
