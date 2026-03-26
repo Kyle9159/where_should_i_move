@@ -15,6 +15,7 @@
     "db:seed:expanded": "npx tsx src/db/seed-expanded.ts",
     "db:seed:photos": "npx tsx src/db/seed-photos.ts",
     "db:seed:summaries": "npx tsx src/db/seed-summaries.ts",
+    "db:seed:3k": "npx tsx src/db/seed-3k.ts",
     "db:enrich:climate": "npx tsx src/db/enrich-climate.ts",
     "db:enrich:walkscore": "npx tsx src/db/enrich-walkscore.ts",
     "db:enrich:housing": "npx tsx src/db/enrich-housing.ts",
