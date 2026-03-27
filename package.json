@@ -22,7 +22,10 @@
     "db:enrich:schools": "npx tsx src/db/enrich-schools.ts",
     "db:enrich:crime": "npx tsx src/db/enrich-crime.ts",
     "db:enrich:bls": "npx tsx src/db/enrich-bls.ts",
-    "db:enrich:housing": "npx tsx src/db/enrich-housing.ts"
+    "db:enrich:schools:free": "npx tsx src/db/enrich-schools-free.ts",
+    "db:enrich:schools:nces": "npx tsx src/db/enrich-schools-nces.ts",
+    "db:normalize": "npx tsx src/db/normalize-batch.ts",
+    "db:normalize:all": "ALL=1 npx tsx src/db/normalize-batch.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
