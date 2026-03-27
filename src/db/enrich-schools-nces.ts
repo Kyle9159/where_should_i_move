@@ -77,7 +77,8 @@ async function fetchStatePlaces(stateFips: string): Promise<Map<string, {
 		if (!res.ok) return new Map();
 		const rows = await res.json() as string[][];
 
-		const result = new Map<string, ReturnType<typeof fetchStatePlaces extends Promise<infer T> ? T : never> extends Map<string, infer V> ? V : never>();
+		type PlaceEntry = { publicEnroll: number; privateEnroll: number; hsGrad: number; bachelors: number; total25: number; placeFips: string };
+		const result = new Map<string, PlaceEntry>();
 		for (const row of rows.slice(1)) {
 			const name = row[0].split(",")[0]
 				.replace(/\b(city|town|village|borough|municipality|township|cdp)\b/gi, "")

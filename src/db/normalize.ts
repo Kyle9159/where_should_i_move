@@ -4,7 +4,7 @@
  * and writes the results to city_filter_scores.
  */
 import { createId } from "@paralleldrive/cuid2";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema";
 
@@ -28,9 +28,10 @@ function riskScore(risk: string | null | undefined): number {
 	return map[risk ?? "low"] ?? 50;
 }
 
-export async function computeAllScores(db: DB): Promise<number> {
-	// Fetch all cities with their related data in one pass
+export async function computeAllScores(db: DB, cityIds?: string[]): Promise<number> {
+	// Fetch cities with their related data in one pass (optionally filtered by IDs)
 	const cities = db.query.cities.findMany({
+		where: cityIds?.length ? (c, { inArray }) => inArray(c.id, cityIds) : undefined,
 		with: {
 			housing: true,
 			jobs: true,
@@ -118,7 +119,7 @@ export async function computeAllScores(db: DB): Promise<number> {
 			// Family
 			scoreSchoolQuality: minMaxNorm(sc?.greatSchoolsRating, 1, 10),
 			scoreHighSchool: minMaxNorm(sc?.highSchoolRating, 1, 10),
-			scoreGraduationRate: minMaxNorm(sc?.graduationRate, 60, 98),
+			scoreGraduationRate: minMaxNorm(sc?.graduationRate, 25, 95),
 			scoreChildcare: 50,
 			scorePupilSpending: minMaxNorm(sc?.perPupilSpending, 5_000, 25_000),
 

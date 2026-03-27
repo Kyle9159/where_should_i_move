@@ -43,28 +43,13 @@ async function main() {
 		`🧮 Computing filter scores for ${cities.length} cities${RECOMPUTE_ALL ? " (ALL mode)" : " (missing only)"}...`
 	);
 
-	let ok = 0;
-	let failed = 0;
-
-	for (let i = 0; i < cities.length; i++) {
-		const city = cities[i];
-		try {
-			await computeAllScores(db, city.id);
-			ok++;
-		} catch {
-			failed++;
-		}
-
-		if ((i + 1) % 50 === 0 || i + 1 === cities.length) {
-			const pct = Math.round(((i + 1) / cities.length) * 100);
-			process.stdout.write(
-				`\r  ✓ ${ok} scored, ${failed} failed — ${pct}% (${i + 1}/${cities.length})`
-			);
-		}
-	}
+	// computeAllScores processes all cities in one pass — no need to loop per city.
+	// The cityIds filter scopes which cities to update.
+	const cityIds = RECOMPUTE_ALL ? undefined : cities.map((c) => c.id);
+	const ok = await computeAllScores(db, cityIds);
 
 	const total = (sqlite.prepare("SELECT COUNT(*) as c FROM city_filter_scores").get() as { c: number }).c;
-	console.log(`\n\n✅ Done! ${ok} scored, ${failed} failed.`);
+	console.log(`\n✅ Done! ${ok} cities scored.`);
 	console.log(`   Total rows in city_filter_scores: ${total}`);
 
 	sqlite.close();
