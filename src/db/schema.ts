@@ -98,6 +98,9 @@ export const neighborhoods = sqliteTable("neighborhoods", {
 	lat: real("lat"),
 	lng: real("lng"),
 	vibeKeywords: text("vibe_keywords"), // JSON string array
+	pros: text("pros"), // JSON string array, 2-3 positives
+	cons: text("cons"), // JSON string array, 2-3 negatives
+	bestFor: text("best_for"), // JSON string array e.g. ["families","young professionals"]
 	medianRent: integer("median_rent"),
 	medianHomePrice: integer("median_home_price"),
 	walkScore: integer("walk_score"),
@@ -332,6 +335,8 @@ export const cityFilterScores = sqliteTable("city_filter_scores", {
 	scoreNightlife: integer("score_nightlife"),
 	scoreArtsAndCulture: integer("score_arts_and_culture"),
 	scoreDiversity: integer("score_diversity"),
+	scoreCollegeEducated: integer("score_college_educated"),
+	scoreHomeownership: integer("score_homeownership"),
 	scoreLgbtqFriendly: integer("score_lgbtq_friendly"),
 	scoreMedAge: integer("score_med_age"),
 	scoreCollegeTown: integer("score_college_town"),

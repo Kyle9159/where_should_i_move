@@ -42,7 +42,9 @@ export const SCORE_CATEGORIES: Record<string, keyof CategoryScores> = {
 	scoreArtsAndCulture: "lifestyle",
 	scoreDiversity: "lifestyle",
 	scoreLgbtqFriendly: "lifestyle",
+	scoreCollegeEducated: "lifestyle",
 	scoreMedAge: "lifestyle",
+	scoreHomeownership: "practical",
 	scoreCollegeTown: "lifestyle",
 	scoreTechHub: "lifestyle",
 
@@ -137,13 +139,29 @@ export function rankCities(
 }
 
 // Encode/decode weights to/from base64 URL params
+// Uses btoa/atob instead of Buffer — works in both browser and Node without polyfill issues
 export function encodeWeights(weights: FilterWeights): string {
-	return Buffer.from(JSON.stringify(weights)).toString("base64url");
+	try {
+		const json = JSON.stringify(weights);
+		// Base64 encode then make URL-safe
+		const b64 = typeof btoa !== "undefined"
+			? btoa(json)
+			: Buffer.from(json).toString("base64");
+		return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+	} catch {
+		return "";
+	}
 }
 
 export function decodeWeights(encoded: string): FilterWeights {
 	try {
-		return JSON.parse(Buffer.from(encoded, "base64url").toString()) as FilterWeights;
+		// Restore standard base64 padding and characters
+		const b64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
+		const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+		const json = typeof atob !== "undefined"
+			? atob(padded)
+			: Buffer.from(padded, "base64").toString();
+		return JSON.parse(json) as FilterWeights;
 	} catch {
 		return {};
 	}

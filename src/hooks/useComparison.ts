@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 const STORAGE_KEY = "nexthome_compare";
+const SYNC_EVENT = "nexthome_compare_sync";
 const MAX_CITIES = 4;
 
 export interface CompareEntry {
@@ -12,49 +13,73 @@ export interface CompareEntry {
 	stateId: string;
 }
 
+function readStorage(): CompareEntry[] {
+	if (typeof window === "undefined") return [];
+	try {
+		const stored = localStorage.getItem(STORAGE_KEY);
+		return stored ? (JSON.parse(stored) as CompareEntry[]) : [];
+	} catch {
+		return [];
+	}
+}
+
+function writeStorage(cities: CompareEntry[]) {
+	localStorage.setItem(STORAGE_KEY, JSON.stringify(cities));
+	// Broadcast to all other useComparison instances on the same page
+	window.dispatchEvent(new CustomEvent(SYNC_EVENT, { detail: cities }));
+}
+
 export function useComparison() {
 	const [cities, setCities] = useState<CompareEntry[]>([]);
 
 	// Load from localStorage on mount
 	useEffect(() => {
-		if (typeof window === "undefined") return;
-		try {
-			const stored = localStorage.getItem(STORAGE_KEY);
-			if (stored) setCities(JSON.parse(stored) as CompareEntry[]);
-		} catch {
-			// ignore
-		}
+		setCities(readStorage());
 	}, []);
 
-	// Persist to localStorage whenever cities changes
+	// Listen for same-tab sync events from other useComparison instances
 	useEffect(() => {
-		if (typeof window === "undefined") return;
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(cities));
-	}, [cities]);
+		const handler = (e: Event) => {
+			setCities((e as CustomEvent<CompareEntry[]>).detail);
+		};
+		window.addEventListener(SYNC_EVENT, handler);
+		return () => window.removeEventListener(SYNC_EVENT, handler);
+	}, []);
 
 	const add = useCallback((entry: CompareEntry) => {
 		setCities((prev) => {
 			if (prev.length >= MAX_CITIES) return prev;
 			if (prev.some((c) => c.id === entry.id)) return prev;
-			return [...prev, entry];
+			const next = [...prev, entry];
+			writeStorage(next);
+			return next;
 		});
 	}, []);
 
 	const remove = useCallback((id: string) => {
-		setCities((prev) => prev.filter((c) => c.id !== id));
+		setCities((prev) => {
+			const next = prev.filter((c) => c.id !== id);
+			writeStorage(next);
+			return next;
+		});
 	}, []);
 
 	const toggle = useCallback((entry: CompareEntry) => {
 		setCities((prev) => {
-			if (prev.some((c) => c.id === entry.id)) {
-				return prev.filter((c) => c.id !== entry.id);
-			}
-			if (prev.length >= MAX_CITIES) return prev;
-			return [...prev, entry];
+			const next = prev.some((c) => c.id === entry.id)
+				? prev.filter((c) => c.id !== entry.id)
+				: prev.length >= MAX_CITIES
+					? prev
+					: [...prev, entry];
+			writeStorage(next);
+			return next;
 		});
 	}, []);
 
-	const clear = useCallback(() => setCities([]), []);
+	const clear = useCallback(() => {
+		writeStorage([]);
+		setCities([]);
+	}, []);
 
 	const has = useCallback((id: string) => cities.some((c) => c.id === id), [cities]);
 

@@ -100,12 +100,14 @@ export async function computeAllScores(db: DB, cityIds?: string[]): Promise<numb
 			scoreWalkability: minMaxNorm(w?.walkScore, 0, 100),
 			scoreTransit: minMaxNorm(w?.transitScore, 0, 100),
 			scoreBikeability: minMaxNorm(w?.bikeScore, 0, 100),
-			scoreRestaurants: 50, // placeholder until Google Places integrated
-			scoreNightlife: 50,
+			scoreRestaurants: l?.restaurantsPerCapita != null ? minMaxNorm(l.restaurantsPerCapita, 0, 30) : 50,
+			scoreNightlife: l?.barsNightlifePerCapita != null ? minMaxNorm(l.barsNightlifePerCapita, 0, 15) : 50,
 			scoreArtsAndCulture: 50,
 			scoreDiversity: minMaxNorm((l?.diversityIndex ?? d?.diversityIndex), 0.2, 0.85),
 			scoreLgbtqFriendly: minMaxNorm(l?.lgbtqFriendlyScore, 30, 100),
-			scoreMedAge: 50, // neutral; filtered by user preference
+			scoreCollegeEducated: d?.pctCollegeEducated != null ? minMaxNorm(d.pctCollegeEducated, 0.15, 0.80) : 50,
+			scoreHomeownership: d?.homeownershipRate != null ? minMaxNorm(d.homeownershipRate, 0.35, 0.75) : 50,
+			scoreMedAge: l?.medianAge != null ? invertNorm(l.medianAge, 22, 60) : 50,
 			scoreCollegeTown: 50,
 			scoreTechHub: 50,
 
@@ -153,18 +155,25 @@ export async function computeAllScores(db: DB, cityIds?: string[]): Promise<numb
 		}
 
 		// Update overall score on cities table (balanced preset)
+		// All weights sum to 1.0 — no neutral padding
 		const overall = Math.round(
-			((scores.scoreMedianHomePrice ?? 50) * 0.08) +
-			((scores.scoreJobMarket ?? 50) * 0.08) +
-			((scores.scoreViolentCrime ?? 50) * 0.1) +
-			((scores.scoreSchoolQuality ?? 50) * 0.08) +
-			((scores.scoreWeather ?? 50) * 0.07) +
-			((scores.scoreWalkability ?? 50) * 0.06) +
-			((scores.scoreAirQuality ?? 50) * 0.05) +
-			((scores.scoreNaturalDisasterRisk ?? 50) * 0.06) +
-			((scores.scoreMedianIncome ?? 50) * 0.06) +
-			((scores.scoreUnemployment ?? 50) * 0.06) +
-			50 * 0.30 // remaining weight neutral
+			((scores.scoreMedianHomePrice ?? 50) * 0.15) +
+			((scores.scoreMedianIncome ?? 50) * 0.10) +
+			((scores.scoreJobMarket ?? 50) * 0.07) +
+			((scores.scoreUnemployment ?? 50) * 0.07) +
+			((scores.scoreViolentCrime ?? 50) * 0.10) +
+			((scores.scorePropertyCrime ?? 50) * 0.05) +
+			((scores.scoreSchoolQuality ?? 50) * 0.07) +
+			((scores.scoreGraduationRate ?? 50) * 0.03) +
+			((scores.scoreWeather ?? 50) * 0.05) +
+			((scores.scoreAirQuality ?? 50) * 0.04) +
+			((scores.scoreSunnyDays ?? 50) * 0.02) +
+			((scores.scoreNaturalDisasterRisk ?? 50) * 0.08) +
+			((scores.scoreWalkability ?? 50) * 0.05) +
+			((scores.scoreDiversity ?? 50) * 0.04) +
+			((scores.scoreLowHumidity ?? 50) * 0.03) +
+			((scores.scoreBikeability ?? 50) * 0.02) +
+			((scores.scoreRestaurants ?? 50) * 0.03)
 		);
 
 		await db

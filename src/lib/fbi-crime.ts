@@ -40,31 +40,35 @@ async function findAgencyOri(cityName: string, stateAbbr: string): Promise<{ ori
 		// Flatten all county buckets into one array
 		const agencies: FbiAgency[] = Object.values(data).flat();
 
-		const city = cityName.toLowerCase();
+		const city = cityName.toLowerCase().trim();
 
-		// Priority 1: exact city name match + "Police Department"
+		// Priority 1: exact city name + "Police Department" — name must START with city to avoid
+		// "South Chicago Heights" matching "Chicago", etc.
 		const exactPolice = agencies.find(
-			(a) =>
-				a.agency_name?.toLowerCase().includes(city) &&
-				a.agency_name?.toLowerCase().includes("police department"),
+			(a) => {
+				const n = a.agency_name?.toLowerCase() ?? "";
+				return n.startsWith(city + " police department") || n === city + " police department";
+			},
 		);
 		if (exactPolice) return { ori: exactPolice.ori, name: exactPolice.agency_name };
 
-		// Priority 2: city name match + any "Police"
-		const anyPolice = agencies.find(
-			(a) =>
-				a.agency_name?.toLowerCase().includes(city) &&
-				a.agency_name?.toLowerCase().includes("police"),
+		// Priority 2: starts with city + "Police"
+		const startsPolice = agencies.find(
+			(a) => {
+				const n = a.agency_name?.toLowerCase() ?? "";
+				return n.startsWith(city + " police");
+			},
 		);
-		if (anyPolice) return { ori: anyPolice.ori, name: anyPolice.agency_name };
+		if (startsPolice) return { ori: startsPolice.ori, name: startsPolice.agency_name };
 
-		// Priority 3: city name match + City agency type
-		const cityType = agencies.find(
-			(a) =>
-				a.agency_name?.toLowerCase().includes(city) &&
-				a.agency_type_name === "City",
+		// Priority 3: starts with city + City agency type
+		const startsCity = agencies.find(
+			(a) => {
+				const n = a.agency_name?.toLowerCase() ?? "";
+				return n.startsWith(city + " ") && a.agency_type_name === "City";
+			},
 		);
-		if (cityType) return { ori: cityType.ori, name: cityType.agency_name };
+		if (startsCity) return { ori: startsCity.ori, name: startsCity.agency_name };
 
 		return null;
 	} catch {
@@ -72,8 +76,10 @@ async function findAgencyOri(cityName: string, stateAbbr: string): Promise<{ ori
 	}
 }
 
-// Parse monthly rate data into an annual average
-// Response: { offenses: { rates: { "Agency Name Offenses": { "MM-YYYY": rate, ... } } } }
+// Parse monthly rate data into an annual rate per 100k
+// FBI CDE returns monthly crime rates (per 100k, for each individual month).
+// Average the months then multiply by 12 to get the annualized rate.
+// Response: { offenses: { rates: { "Agency Name Offenses": { "MM-YYYY": monthlyRate, ... } } } }
 function parseRates(data: any, agencyName: string): number | null {
 	try {
 		const rates: Record<string, Record<string, number>> = data?.offenses?.rates ?? {};
@@ -86,10 +92,11 @@ function parseRates(data: any, agencyName: string): number | null {
 		const monthlyRates = Object.values(rates[agencyKey]);
 		if (!monthlyRates.length) return null;
 
-		// Average all monthly values (rates are already per 100k)
+		// Average monthly rates then ×12 to get annualized rate per 100k
 		const valid = monthlyRates.filter((v) => typeof v === "number" && v > 0);
 		if (!valid.length) return null;
-		return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
+		const monthlyAvg = valid.reduce((a, b) => a + b, 0) / valid.length;
+		return Math.round(monthlyAvg * 12);
 	} catch {
 		return null;
 	}

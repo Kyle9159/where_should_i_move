@@ -21,6 +21,7 @@ interface CityRow {
 }
 
 export async function GET(req: NextRequest) {
+	try {
 	const { searchParams } = req.nextUrl;
 
 	const stateIds = searchParams.getAll("stateIds");
@@ -91,4 +92,8 @@ export async function GET(req: NextRequest) {
 		pageSize,
 		totalPages: Math.ceil(total / pageSize),
 	});
+	} catch (err) {
+		console.error("[/api/cities] error:", err);
+		return NextResponse.json({ cities: [], total: 0, page: 1, pageSize: 20, totalPages: 0 }, { status: 500 });
+	}
 }

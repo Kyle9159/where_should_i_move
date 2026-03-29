@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import "leaflet/dist/leaflet.css";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import type { Map as LeafletMap, CircleMarker } from "leaflet";
@@ -16,6 +17,7 @@ interface CityFeature {
 	tier: string;
 	score: number;
 	overallScore: number | null;
+	isNeighborhood: boolean;
 }
 
 interface HeatmapResponse {
@@ -24,14 +26,19 @@ interface HeatmapResponse {
 }
 
 const LAYERS = [
-	{ id: "overall", label: "Overall Score", icon: "⭐" },
-	{ id: "housing", label: "Affordability", icon: "💰" },
-	{ id: "jobs", label: "Job Market", icon: "💼" },
-	{ id: "crime", label: "Safety", icon: "🛡️" },
-	{ id: "climate", label: "Climate", icon: "☀️" },
-	{ id: "schools", label: "Schools", icon: "🎓" },
-	{ id: "walkability", label: "Walkability", icon: "🚶" },
-	{ id: "airquality", label: "Air Quality", icon: "🌬️" },
+	{ id: "overall",       label: "Overall Score",   icon: "⭐" },
+	{ id: "housing",       label: "Affordability",   icon: "💰" },
+	{ id: "jobs",          label: "Job Market",      icon: "💼" },
+	{ id: "income",        label: "Income",          icon: "💵" },
+	{ id: "crime",         label: "Safety",          icon: "🛡️" },
+	{ id: "climate",       label: "Climate",         icon: "☀️" },
+	{ id: "schools",       label: "Schools",         icon: "🎓" },
+	{ id: "walkability",   label: "Walkability",     icon: "🚶" },
+	{ id: "airquality",    label: "Air Quality",     icon: "🌬️" },
+	{ id: "disaster",      label: "Low Disaster Risk", icon: "🌪️" },
+	{ id: "diversity",     label: "Diversity",       icon: "🌍" },
+	{ id: "college",       label: "College Educated",icon: "📚" },
+	{ id: "homeownership", label: "Homeownership",   icon: "🏠" },
 ] as const;
 
 // Score → hex color (red → yellow → green)
@@ -47,6 +54,7 @@ function scoreToRadius(tier: string): number {
 		case "major-city": return 10;
 		case "mid-size": return 7;
 		case "small-city": return 5;
+		case "neighborhood": return 3;
 		default: return 3;
 	}
 }
@@ -55,14 +63,31 @@ export default function MapClient() {
 	const mapRef = useRef<LeafletMap | null>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const markersRef = useRef<CircleMarker[]>([]);
-	const [selectedLayer, setSelectedLayer] = useState<string>("overall");
+	const [selectedLayers, setSelectedLayers] = useState<Set<string>>(new Set(["overall"]));
+	const [showNeighborhoods, setShowNeighborhoods] = useState(false);
 	const [selectedCity, setSelectedCity] = useState<CityFeature | null>(null);
 	const [mapReady, setMapReady] = useState(false);
 
+	function toggleLayer(id: string) {
+		setSelectedLayers((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) {
+				next.delete(id);
+				if (next.size === 0) next.add("overall"); // always keep at least one
+			} else {
+				next.add(id);
+			}
+			return next;
+		});
+	}
+
+	const layersKey = [...selectedLayers].sort().join(",");
+
 	const { data, isLoading } = useQuery<HeatmapResponse>({
-		queryKey: ["heatmap", selectedLayer],
+		queryKey: ["heatmap", layersKey, showNeighborhoods],
 		queryFn: async () => {
-			const res = await fetch(`/api/map/heatmap?layer=${selectedLayer}`);
+			const url = `/api/map/heatmap?layers=${layersKey}${showNeighborhoods ? "&neighborhoods=1" : ""}`;
+			const res = await fetch(url);
 			return res.json() as Promise<HeatmapResponse>;
 		},
 		staleTime: 5 * 60 * 1000,
@@ -104,10 +129,18 @@ export default function MapClient() {
 
 			mapRef.current = map;
 			setMapReady(true);
+			// invalidateSize forces Leaflet to remeasure the container after hydration/layout
+			setTimeout(() => map.invalidateSize(), 100);
+			setTimeout(() => map.invalidateSize(), 500);
 		});
 
 		return () => {
 			mounted = false;
+			// Destroy map on unmount to prevent "container already initialized" on re-navigation
+			if (mapRef.current) {
+				mapRef.current.remove();
+				mapRef.current = null;
+			}
 		};
 	}, []);
 
@@ -116,7 +149,8 @@ export default function MapClient() {
 		if (!mapReady || !mapRef.current || !data?.features) return;
 
 		import("leaflet").then((L) => {
-			const map = mapRef.current!;
+			if (!mapRef.current) return; // map was destroyed while importing
+			const map = mapRef.current;
 
 			// Clear existing markers
 			markersRef.current.forEach((m) => map.removeLayer(m));
@@ -124,13 +158,14 @@ export default function MapClient() {
 
 			// Add new markers
 			const newMarkers = data.features.map((city) => {
+				const isHood = (city as CityFeature).isNeighborhood;
 				const marker = L.circleMarker([city.lat, city.lng], {
 					radius: scoreToRadius(city.tier),
 					fillColor: scoreToColor(city.score),
 					color: "rgba(0,0,0,0.3)",
-					weight: 0.5,
+					weight: isHood ? 0 : 0.5,
 					opacity: 1,
-					fillOpacity: 0.85,
+					fillOpacity: isHood ? 0.5 : 0.85,
 				});
 
 				marker.on("click", () => setSelectedCity(city));
@@ -149,18 +184,13 @@ export default function MapClient() {
 		});
 	}, [data, mapReady]);
 
-	const currentLayerLabel = LAYERS.find((l) => l.id === selectedLayer)?.label ?? "Score";
+	const selectedCount = selectedLayers.size;
+	const layerLabel = selectedCount === 1
+		? (LAYERS.find((l) => selectedLayers.has(l.id))?.label ?? "Score")
+		: `${selectedCount} layers`;
 
 	return (
 		<div className="relative h-screen w-full overflow-hidden" style={{ background: "#0a0a0a" }}>
-			{/* Leaflet CSS */}
-			<link
-				rel="stylesheet"
-				href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-				integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-				crossOrigin=""
-			/>
-
 			{/* Map container */}
 			<div ref={containerRef} className="absolute inset-0 z-0" />
 
@@ -177,28 +207,32 @@ export default function MapClient() {
 
 			{/* Layer controls */}
 			<div
-				className="absolute top-4 right-4 z-[1000] rounded-2xl p-4 flex flex-col gap-2"
-				style={{ background: "oklch(14% 0 0 / 0.92)", backdropFilter: "blur(12px)", border: "1px solid oklch(28% 0 0)", minWidth: 180 }}
+				className="absolute top-4 right-4 z-[1000] rounded-2xl p-4 flex flex-col gap-1"
+				style={{ background: "oklch(14% 0 0 / 0.92)", backdropFilter: "blur(12px)", border: "1px solid oklch(28% 0 0)", minWidth: 190 }}
 			>
 				<p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "oklch(55% 0 0)" }}>
-					Map Layer
+					Map Layers{selectedCount > 1 ? ` (${selectedCount})` : ""}
 				</p>
-				{LAYERS.map((layer) => (
-					<button
-						key={layer.id}
-						type="button"
-						onClick={() => setSelectedLayer(layer.id)}
-						className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg text-left transition-all"
-						style={
-							selectedLayer === layer.id
-								? { background: "oklch(18% 0.04 220)", border: "1px solid #00d4ff", color: "#00d4ff" }
-								: { border: "1px solid transparent", color: "oklch(70% 0 0)" }
-						}
-					>
-						<span>{layer.icon}</span>
-						{layer.label}
-					</button>
-				))}
+				{LAYERS.map((layer) => {
+					const active = selectedLayers.has(layer.id);
+					return (
+						<button
+							key={layer.id}
+							type="button"
+							onClick={() => toggleLayer(layer.id)}
+							className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg text-left transition-all"
+							style={
+								active
+									? { background: "oklch(18% 0.04 220)", border: "1px solid #00d4ff", color: "#00d4ff" }
+									: { border: "1px solid transparent", color: "oklch(70% 0 0)" }
+							}
+						>
+							<span className="w-3 text-center">{active ? "✓" : ""}</span>
+							<span>{layer.icon}</span>
+							{layer.label}
+						</button>
+					);
+				})}
 
 				{/* Legend */}
 				<div className="mt-2 pt-2" style={{ borderTop: "1px solid oklch(28% 0 0)" }}>
@@ -209,12 +243,27 @@ export default function MapClient() {
 						<span className="text-xs" style={{ color: "oklch(55% 0 0)" }}>High</span>
 					</div>
 				</div>
+
+				{/* Neighborhoods toggle */}
+				<button
+					type="button"
+					onClick={() => setShowNeighborhoods((v) => !v)}
+					className="mt-2 flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg w-full"
+					style={
+						showNeighborhoods
+							? { background: "oklch(18% 0.04 220)", border: "1px solid #00d4ff", color: "#00d4ff" }
+							: { border: "1px solid oklch(28% 0 0)", color: "oklch(55% 0 0)" }
+					}
+				>
+					<span>{showNeighborhoods ? "✓" : "○"}</span>
+					🏘️ Show Neighborhoods
+				</button>
 			</div>
 
 			{/* Loading overlay */}
 			{isLoading && (
 				<div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[1000] px-4 py-2 rounded-xl text-xs" style={{ background: "oklch(14% 0 0 / 0.9)", color: "#00d4ff" }}>
-					Loading {currentLayerLabel} data...
+					Loading {layerLabel} data...
 				</div>
 			)}
 
@@ -227,7 +276,7 @@ export default function MapClient() {
 					<div className="flex-1">
 						<p className="font-bold">{selectedCity.name}</p>
 						<p className="text-xs" style={{ color: "oklch(55% 0 0)" }}>
-							{selectedCity.stateId} · {currentLayerLabel}: {selectedCity.score}/100
+							{selectedCity.stateId} · {layerLabel}: {selectedCity.score}/100
 						</p>
 					</div>
 					<div className="flex items-center gap-2">

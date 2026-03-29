@@ -112,7 +112,7 @@ export default async function LandingPage() {
 			</section>
 
 			{/* City strip */}
-			<section className="px-6 pb-16">
+			<section className="px-6 pb-16 max-w-5xl mx-auto w-full">
 				<p className="text-xs text-center mb-4 tracking-widest uppercase" style={{ color: "var(--color-muted)" }}>
 					Top-scoring cities
 				</p>

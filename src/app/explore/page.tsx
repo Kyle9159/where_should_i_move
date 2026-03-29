@@ -81,8 +81,8 @@ function ExploreInner() {
 		if (sortBy !== "match") p.set("sort", sortBy);
 		const qs = p.toString();
 		const url = qs ? `/explore?${qs}` : "/explore";
-		window.history.replaceState(null, "", url);
-	}, [selectedStates, selectedTiers, weights, sortBy]);
+		router.replace(url, { scroll: false });
+	}, [selectedStates, selectedTiers, weights, sortBy, router]);
 
 	function handleShare() {
 		const url = window.location.href;
@@ -103,7 +103,7 @@ function ExploreInner() {
 		return params.toString();
 	}, [selectedStates, selectedTiers, weights, sortBy, page]);
 
-	const { data, isLoading } = useQuery<CitiesResponse>({
+	const { data, isLoading, isError, refetch } = useQuery<CitiesResponse>({
 		queryKey: ["cities", selectedStates, selectedTiers, weights, sortBy, page],
 		queryFn: async () => {
 			const res = await fetch(`/api/cities?${buildQueryParams()}`);
@@ -331,22 +331,39 @@ function ExploreInner() {
 								</button>
 							</span>
 						))}
-						{/* Active weight filter pills */}
-						{ACTIVE_FILTER_PILLS(weights).map(({ key, label, icon }) => (
+						{/* Active weight filter pills — quiz mode shows single badge, manual shows individual */}
+						{Object.keys(weights).length >= 3 ? (
 							<span
-								key={key}
-								className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full shrink-0"
+								className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full shrink-0 font-medium"
 								style={{ background: "oklch(18% 0.04 220)", border: "1px solid var(--color-accent)", color: "var(--color-accent)" }}
 							>
-								<span>{icon}</span>{label}
+								🤖 Quiz rankings active
 								<button
 									type="button"
-									onClick={() => setWeights((p) => { const n = { ...p }; delete n[key as keyof FilterWeights]; return n; })}
+									onClick={() => setWeights({})}
+									title="Reset quiz results"
+									className="hover:opacity-70 transition-opacity"
 								>
-									<X size={10} />
+									<X size={11} />
 								</button>
 							</span>
-						))}
+						) : (
+							ACTIVE_FILTER_PILLS(weights).map(({ key, label, icon }) => (
+								<span
+									key={key}
+									className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full shrink-0"
+									style={{ background: "oklch(18% 0.04 220)", border: "1px solid var(--color-accent)", color: "var(--color-accent)" }}
+								>
+									<span>{icon}</span>{label}
+									<button
+										type="button"
+										onClick={() => setWeights((p) => { const n = { ...p }; delete n[key as keyof FilterWeights]; return n; })}
+									>
+										<X size={10} />
+									</button>
+								</span>
+							))
+						)}
 						{(selectedStates.length > 0 || Object.keys(weights).length > 0 || selectedTiers.length > 0) && (
 							<button
 								type="button"
@@ -394,10 +411,22 @@ function ExploreInner() {
 								<div key={i} className="glass rounded-2xl h-72 animate-pulse" />
 							))}
 						</div>
+					) : isError ? (
+						<div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
+							<p className="text-sm" style={{ color: "var(--color-muted)" }}>Failed to load cities. Check your connection and try again.</p>
+							<button
+								type="button"
+								onClick={() => refetch()}
+								className="text-xs px-4 py-2 rounded-lg border transition-colors hover:border-[var(--color-accent)]"
+								style={{ borderColor: "var(--color-border)", color: "var(--color-foreground)" }}
+							>
+								Retry
+							</button>
+						</div>
 					) : (
 						<>
 							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-24">
-								{data?.cities.map((city) => (
+								{data?.cities?.map((city) => (
 									<CityCard key={city.id} city={city} />
 								))}
 							</div>
@@ -581,6 +610,17 @@ const FILTER_CATEGORIES = [
 			{ key: "scoreHealthcare", label: "Healthcare", icon: "🏥" },
 			{ key: "scoreBroadband", label: "Internet Speed", icon: "📡" },
 			{ key: "scorePopulationGrowth", label: "Growth Trajectory", icon: "📈" },
+		],
+	},
+	{
+		id: "demographics",
+		label: "Demographics",
+		icon: "👥",
+		filters: [
+			{ key: "scoreDiversity", label: "Diversity", icon: "🌍" },
+			{ key: "scoreCollegeEducated", label: "College Educated", icon: "🎓" },
+			{ key: "scoreHomeownership", label: "Homeownership Rate", icon: "🏠" },
+			{ key: "scoreMedAge", label: "Young City", icon: "⚡" },
 		],
 	},
 	{

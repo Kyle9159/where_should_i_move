@@ -24,10 +24,16 @@
     "db:enrich:bls": "npx tsx src/db/enrich-bls.ts",
     "db:enrich:schools:free": "npx tsx src/db/enrich-schools-free.ts",
     "db:enrich:schools:nces": "npx tsx src/db/enrich-schools-nces.ts",
+    "db:enrich:walkability": "npx tsx src/db/enrich-walkability-osm.ts",
+    "db:enrich:airnow": "npx tsx src/db/enrich-airnow.ts",
+    "db:enrich:lifestyle": "npx tsx src/db/enrich-lifestyle.ts",
+    "db:enrich:demographics": "npx tsx src/db/enrich-demographics.ts",
     "db:normalize": "npx tsx src/db/normalize-batch.ts",
-    "db:normalize:all": "ALL=1 npx tsx src/db/normalize-batch.ts"
+    "db:normalize:all": "ALL=1 npx tsx src/db/normalize-batch.ts",
+    "db:seed:neighborhoods": "npx tsx src/db/seed-neighborhoods.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@hookform/resolvers": "^5.2.2",
     "@neondatabase/serverless": "^1.0.2",
     "@paralleldrive/cuid2": "^3.3.0",
@@ -53,6 +59,7 @@
     "next": "16.2.1",
     "next-auth": "^4.24.13",
     "node-cron": "^4.2.1",
+    "openai": "^6.33.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.72.0",

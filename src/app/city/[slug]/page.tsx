@@ -96,6 +96,18 @@ export default async function CityPage({ params }: Props) {
 	const l = city.lifestyle;
 	const fs = city.filterScores;
 
+	// Category averages — mirrors computeCategoryScores() in ranking.ts so tile and detail match
+	function avg(...vals: (number | null | undefined)[]): number {
+		const valid = vals.filter((v): v is number => v != null);
+		if (valid.length === 0) return 50;
+		return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
+	}
+	const catEssentials = avg(fs?.scoreMedianHomePrice, fs?.scoreMedianRent, fs?.scoreJobMarket, fs?.scoreUnemployment, fs?.scoreMedianIncome);
+	const catLifestyle = avg(fs?.scoreWalkability, fs?.scoreTransit, fs?.scoreBikeability, fs?.scoreRestaurants, fs?.scoreDiversity);
+	const catSafety = avg(fs?.scoreViolentCrime, fs?.scorePropertyCrime);
+	const catSchools = avg(fs?.scoreSchoolQuality, fs?.scoreGraduationRate);
+	const catClimate = avg(fs?.scoreWeather, fs?.scoreAirQuality, fs?.scoreSunnyDays, fs?.scoreNaturalDisasterRisk);
+
 	const score = Math.round(city.overallScore ?? 50);
 	const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://nexthomeusa.com";
 
@@ -173,11 +185,11 @@ export default async function CityPage({ params }: Props) {
 					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
 						<div className="grid grid-cols-5 gap-2">
 							{[
-								{ label: "Essentials", score: fs?.scoreMedianHomePrice, icon: "💰" },
-								{ label: "Lifestyle", score: fs?.scoreWalkability, icon: "🎭" },
-								{ label: "Safety", score: fs?.scoreViolentCrime, icon: "🛡️" },
-								{ label: "Schools", score: fs?.scoreSchoolQuality, icon: "🎓" },
-								{ label: "Climate", score: fs?.scoreWeather, icon: "☀️" },
+								{ label: "Essentials", score: catEssentials, icon: "💰" },
+								{ label: "Lifestyle", score: catLifestyle, icon: "🎭" },
+								{ label: "Safety", score: catSafety, icon: "🛡️" },
+								{ label: "Schools", score: catSchools, icon: "🎓" },
+								{ label: "Climate", score: catClimate, icon: "☀️" },
 							].map((cat) => (
 								<div key={cat.label} className="flex flex-col items-center gap-2 text-center">
 									<span className="text-xl">{cat.icon}</span>
@@ -190,11 +202,11 @@ export default async function CityPage({ params }: Props) {
 						</div>
 						{fs && (
 							<ScoreRadarChart
-								essentials={fs.scoreMedianHomePrice ?? 50}
-								lifestyle={fs.scoreWalkability ?? 50}
-								practical={fs.scoreViolentCrime ?? 50}
-								family={fs.scoreSchoolQuality ?? 50}
-								nature={fs.scoreWeather ?? 50}
+								essentials={catEssentials}
+								lifestyle={catLifestyle}
+								practical={catSafety}
+								family={catSchools}
+								nature={catClimate}
 							/>
 						)}
 					</div>
