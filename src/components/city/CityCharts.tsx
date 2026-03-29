@@ -186,27 +186,30 @@ const DEMO_COLORS = ["#00d4ff", "#7c3aed", "#10b981", "#f59e0b", "#6b7280"];
 
 export function DemographicsDonut({ pctWhite, pctBlack, pctHispanic, pctAsian, pctOther }: DemoProps) {
 	const raw = [
-		{ name: "White", value: pctWhite ?? 0 },
-		{ name: "Hispanic", value: pctHispanic ?? 0 },
-		{ name: "Black", value: pctBlack ?? 0 },
-		{ name: "Asian", value: pctAsian ?? 0 },
-		{ name: "Other", value: pctOther ?? 0 },
+		{ name: "White", value: Math.round((pctWhite ?? 0) * 100) },
+		{ name: "Hispanic", value: Math.round((pctHispanic ?? 0) * 100) },
+		{ name: "Black", value: Math.round((pctBlack ?? 0) * 100) },
+		{ name: "Asian", value: Math.round((pctAsian ?? 0) * 100) },
+		{ name: "Other", value: Math.round((pctOther ?? 0) * 100) },
 	].filter((d) => d.value > 0);
 
 	if (raw.length === 0) return null;
 
 	return (
-		<ResponsiveContainer width="100%" height={200}>
+		<ResponsiveContainer width="100%" height={260}>
 			<PieChart>
 				<Pie
-					data={raw} dataKey="value" cx="50%" cy="50%"
-					innerRadius={50} outerRadius={80} paddingAngle={2}
-					label={({ name, value }) => `${name} ${Math.round(value)}%`}
-					labelLine={false}
+					data={raw} dataKey="value" cx="50%" cy="45%"
+					innerRadius={55} outerRadius={85} paddingAngle={2}
 				>
 					{raw.map((_, i) => <Cell key={i} fill={DEMO_COLORS[i % DEMO_COLORS.length]} />)}
 				</Pie>
-				<Tooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [`${Number(v).toFixed(1)}%`] as [string]} />
+				<Tooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [`${v}%`] as [string]} />
+				<Legend
+					formatter={(value, entry) => (
+						<span style={{ color: TEXT, fontSize: 12 }}>{value} {(entry as any).payload?.value}%</span>
+					)}
+				/>
 			</PieChart>
 		</ResponsiveContainer>
 	);

@@ -309,8 +309,8 @@ export default async function CityPage({ params }: Props) {
 
 					{/* Walkability */}
 					<Section title="🚶 Walkability" icon={Footprints}>
-						<DataRow label="Walk Score" value={w?.walkScore?.toString()} />
-						<DataRow label="Transit Score" value={w?.transitScore?.toString()} />
+						<DataRow label="Walk Score" value={w?.walkScore ? w.walkScore.toString() : "N/A"} />
+						<DataRow label="Transit Score" value={w?.transitScore ? w.transitScore.toString() : "N/A"} />
 						<DataRow label="Bike Score" value={w?.bikeScore?.toString()} />
 						{w?.walkScoreLabel && <DataRow label="Walk Grade" value={w.walkScoreLabel} />}
 					</Section>
@@ -351,22 +351,22 @@ export default async function CityPage({ params }: Props) {
 							/>
 							<div className="space-y-2">
 								{city.demographics.pctCollegeEducated && (
-									<DataRow label="College Educated" value={`${city.demographics.pctCollegeEducated.toFixed(0)}%`} />
+									<DataRow label="College Educated" value={`${(city.demographics.pctCollegeEducated * 100).toFixed(0)}%`} />
 								)}
 								{city.demographics.pctUnder18 && (
-									<DataRow label="Under 18" value={`${city.demographics.pctUnder18.toFixed(0)}%`} />
+									<DataRow label="Under 18" value={`${(city.demographics.pctUnder18 * 100).toFixed(0)}%`} />
 								)}
 								{city.demographics.pctOver65 && (
-									<DataRow label="Over 65" value={`${city.demographics.pctOver65.toFixed(0)}%`} />
+									<DataRow label="Over 65" value={`${(city.demographics.pctOver65 * 100).toFixed(0)}%`} />
 								)}
 								{city.demographics.homeownershipRate && (
-									<DataRow label="Homeownership" value={`${city.demographics.homeownershipRate.toFixed(0)}%`} />
+									<DataRow label="Homeownership" value={`${(city.demographics.homeownershipRate * 100).toFixed(0)}%`} />
 								)}
 								{city.demographics.pctMarried && (
-									<DataRow label="Married Households" value={`${city.demographics.pctMarried.toFixed(0)}%`} />
+									<DataRow label="Married Households" value={`${(city.demographics.pctMarried * 100).toFixed(0)}%`} />
 								)}
 								{city.demographics.pctForeignBorn && (
-									<DataRow label="Foreign Born" value={`${city.demographics.pctForeignBorn.toFixed(0)}%`} />
+									<DataRow label="Foreign Born" value={`${(city.demographics.pctForeignBorn * 100).toFixed(0)}%`} />
 								)}
 								{city.demographics.diversityIndex && (
 									<DataRow label="Diversity Index" value={city.demographics.diversityIndex.toFixed(2)} />
