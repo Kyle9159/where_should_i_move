@@ -140,7 +140,7 @@ function DashboardContent() {
 			{/* Header */}
 			<header className="border-b px-6 py-4 flex items-center justify-between glass" style={{ borderColor: "var(--color-border)" }}>
 				<Link href="/" className="font-bold text-lg">
-					<span style={{ color: "var(--color-accent)" }}>Next</span>Home USA
+					<span style={{ color: "var(--color-accent)" }}>Where</span>ShouldIMove
 				</Link>
 				<div className="flex items-center gap-4">
 					{isPremium && <PremiumBadge />}

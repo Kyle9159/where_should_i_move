@@ -124,7 +124,7 @@ function ExploreInner() {
 			>
 				<div className="flex items-center justify-between p-4 border-b" style={{ borderColor: "var(--color-border)" }}>
 					<Link href="/" className="font-bold text-sm">
-						<span style={{ color: "var(--color-accent)" }}>Next</span>Home USA
+						<span style={{ color: "var(--color-accent)" }}>Where</span>ShouldIMove
 					</Link>
 					<div className="flex items-center gap-2">
 						<Link href="/map" className="text-xs flex items-center gap-0.5" style={{ color: "var(--color-muted)" }}><Map size={11} /> Map</Link>

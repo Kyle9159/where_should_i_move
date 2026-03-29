@@ -34,7 +34,7 @@ export default async function LandingPage() {
 			{/* Nav */}
 			<nav className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-6 py-4 glass border-b border-[var(--color-border)]">
 				<span className="font-bold text-lg tracking-tight">
-					<span style={{ color: "var(--color-accent)" }}>Next</span>Home USA
+					<span style={{ color: "var(--color-accent)" }}>Where</span>ShouldIMove
 				</span>
 				<div className="flex items-center gap-3">
 					<Link href="/explore" className="text-sm transition-colors hover:text-white hidden sm:inline" style={{ color: "var(--color-muted)" }}>

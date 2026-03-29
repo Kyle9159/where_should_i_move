@@ -50,7 +50,7 @@ function SignInForm() {
 			<div className="w-full max-w-sm">
 				<div className="text-center mb-8">
 					<Link href="/" className="text-xl font-bold">
-						<span style={{ color: "var(--color-accent)" }}>Next</span>Home USA
+						<span style={{ color: "var(--color-accent)" }}>Where</span>ShouldIMove
 					</Link>
 					<p className="text-sm mt-2" style={{ color: "var(--color-muted)" }}>
 						{mode === "signin" ? "Sign in to your account" : "Create a free account"}
