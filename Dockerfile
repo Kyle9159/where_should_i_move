@@ -8,10 +8,13 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# Provide dummy vars so next.config doesn't fail at build time
+# Provide dummy vars so modules don't throw at build time
 ENV DATABASE_URL=file:./nexthome.db
 ENV NEXTAUTH_SECRET=build-placeholder
 ENV NEXTAUTH_URL=http://localhost:3010
+ENV STRIPE_SECRET_KEY=sk_test_build_placeholder
+ENV STRIPE_PREMIUM_MONTHLY_PRICE_ID=price_placeholder
+ENV STRIPE_PREMIUM_YEARLY_PRICE_ID=price_placeholder
 RUN npm run build
 
 FROM node:20-alpine AS runner
