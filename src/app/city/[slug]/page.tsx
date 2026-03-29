@@ -13,6 +13,7 @@ import { DownloadReportButton } from "@/components/city/DownloadReportButton";
 import { RedditSentiment } from "@/components/city/RedditSentiment";
 import { ScoreRadarChart, CostBreakdownChart, ClimateLineChart, DemographicsDonut } from "@/components/city/CityCharts";
 import { ShareButtons } from "@/components/city/ShareButtons";
+import { CityMiniMap } from "@/components/city/CityMiniMap";
 import { formatCurrency, formatNumber, formatPct, scoreToGrade, scoreToColor } from "@/lib/utils";
 
 interface Props {
@@ -133,7 +134,11 @@ export default async function CityPage({ params }: Props) {
 			{/* Hero */}
 			<div
 				className="relative h-72 sm:h-96 flex items-end"
-				style={{ background: "linear-gradient(160deg, oklch(18% 0.06 220) 0%, oklch(10% 0.02 200) 100%)" }}
+				style={{
+					background: city.heroImageUrl
+						? `url(${city.heroImageUrl}) center/cover no-repeat`
+						: "linear-gradient(160deg, oklch(18% 0.06 220) 0%, oklch(10% 0.02 200) 100%)",
+				}}
 			>
 				{/* Overlay gradient */}
 				<div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -176,6 +181,13 @@ export default async function CityPage({ params }: Props) {
 					<StatCard icon={TrendingUp} label="Median Income" value={formatCurrency(j?.medianHouseholdIncome, { compact: true })} />
 					<StatCard icon={CloudSun} label="Sunny Days" value={c?.sunnyDaysPerYear ? `${c.sunnyDaysPerYear}/yr` : "N/A"} />
 				</div>
+
+				{/* Location Map */}
+				{city.lat && city.lng && (
+					<div className="glass rounded-2xl overflow-hidden" style={{ padding: 1 }}>
+						<CityMiniMap lat={city.lat} lng={city.lng} cityName={city.name} />
+					</div>
+				)}
 
 				{/* Score breakdown + radar */}
 				<div className="glass rounded-2xl p-6">
