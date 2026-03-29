@@ -33,25 +33,30 @@ const sqlite = new Database(dbUrl);
 
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 
-async function overpassCount(query: string): Promise<number> {
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), 35000);
-	try {
-		const res = await fetch(OVERPASS_URL, {
-			method: "POST",
-			headers: { "Content-Type": "application/x-www-form-urlencoded" },
-			body: `data=${encodeURIComponent(query)}`,
-			signal: controller.signal,
-		});
-		clearTimeout(timer);
-		if (!res.ok) return 0;
-		const data = await res.json();
-		const countEl = data?.elements?.[0];
-		return parseInt(countEl?.tags?.total ?? "0", 10);
-	} catch {
-		clearTimeout(timer);
-		return 0;
+async function overpassCount(query: string, retries = 2): Promise<number> {
+	for (let attempt = 0; attempt <= retries; attempt++) {
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), 65000); // 65s — covers dense cities
+		try {
+			const res = await fetch(OVERPASS_URL, {
+				method: "POST",
+				headers: { "Content-Type": "application/x-www-form-urlencoded" },
+				body: `data=${encodeURIComponent(query)}`,
+				signal: controller.signal,
+			});
+			clearTimeout(timer);
+			if (!res.ok) { await sleep(3000); continue; }
+			const data = await res.json();
+			const countEl = data?.elements?.[0];
+			const n = parseInt(countEl?.tags?.total ?? "0", 10);
+			if (n === 0 && attempt < retries) { await sleep(3000); continue; } // retry on suspicious 0
+			return n;
+		} catch {
+			clearTimeout(timer);
+			if (attempt < retries) await sleep(3000);
+		}
 	}
+	return 0;
 }
 
 function computePercentile(values: number[], pct: number): number {
@@ -87,8 +92,8 @@ async function main() {
 		const city = cities[i];
 		const { lat, lng } = city;
 
-		const walkQuery = `[out:json][timeout:30];node(around:1609,${lat},${lng})[amenity~"^(restaurant|cafe|bar|fast_food|pharmacy|supermarket|convenience|school|bank|post_office)$"];out count;`;
-		const transitQuery = `[out:json][timeout:30];(node(around:1000,${lat},${lng})[highway=bus_stop];node(around:1000,${lat},${lng})[railway~"^(station|tram_stop|subway_entrance)$"];);out count;`;
+		const walkQuery = `[out:json][timeout:60];node(around:1609,${lat},${lng})[amenity~"^(restaurant|cafe|bar|fast_food|pharmacy|supermarket|convenience|school|bank|post_office|library|gym|cinema|theatre|marketplace)$"];out count;`;
+		const transitQuery = `[out:json][timeout:60];(node(around:1200,${lat},${lng})[highway=bus_stop];node(around:1200,${lat},${lng})[public_transport=stop_position];node(around:1200,${lat},${lng})[railway~"^(station|tram_stop|subway_entrance|halt)$"];node(around:1200,${lat},${lng})[amenity=bus_station];);out count;`;
 
 		const walkCount = await overpassCount(walkQuery);
 		await sleep(500); // brief gap between the two sub-queries
