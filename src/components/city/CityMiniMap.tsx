@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { Map as LeafletMap } from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 interface Props {
 	lat: number;
@@ -17,6 +18,7 @@ export function CityMiniMap({ lat, lng, cityName }: Props) {
 		if (!containerRef.current || mapRef.current) return;
 		let mounted = true;
 
+		// Load CSS + Leaflet together so tiles render correctly
 		import("leaflet").then((L) => {
 			if (!mounted || !containerRef.current) return;
 
@@ -32,16 +34,18 @@ export function CityMiniMap({ lat, lng, cityName }: Props) {
 				keyboard: false,
 			});
 
+			// CartoDB Voyager — clean, readable, visible against dark UI
 			L.tileLayer(
-				"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+				"https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
 				{ subdomains: "abcd", maxZoom: 14 },
 			).addTo(map);
 
+			// Pulsing cyan marker at city center
 			L.circleMarker([lat, lng] as [number, number], {
 				radius: 10,
 				fillColor: "#00d4ff",
-				color: "rgba(0,212,255,0.3)",
-				weight: 6,
+				color: "rgba(0,212,255,0.4)",
+				weight: 8,
 				fillOpacity: 1,
 			}).addTo(map);
 
@@ -63,19 +67,19 @@ export function CityMiniMap({ lat, lng, cityName }: Props) {
 			target="_blank"
 			rel="noopener noreferrer"
 			className="block relative overflow-hidden group cursor-pointer"
-			style={{ height: 220 }}
+			style={{ height: 260 }}
 			aria-label={`Open ${cityName} in Google Maps`}
 		>
 			<div ref={containerRef} className="absolute inset-0" />
 			{/* Hover overlay */}
 			<div
 				className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-				style={{ background: "rgba(0,0,0,0.4)" }}
+				style={{ background: "rgba(0,0,0,0.45)" }}
 			>
 				<span
 					className="text-sm font-medium px-4 py-2 rounded-xl"
 					style={{
-						background: "oklch(18% 0.04 220)",
+						background: "oklch(12% 0.04 220)",
 						border: "1px solid #00d4ff",
 						color: "#00d4ff",
 					}}
