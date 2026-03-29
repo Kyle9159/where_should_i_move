@@ -74,7 +74,7 @@ export const SCORE_CATEGORIES: Record<string, keyof CategoryScores> = {
 	scoreLowHumidity: "nature",
 };
 
-const BACKGROUND_WEIGHT = 0.003; // tiny contribution for filters user didn't set
+const BACKGROUND_WEIGHT = 0; // only score keys the user explicitly weighted
 
 export function computeMatchPct(
 	scores: CityFilterScores,
@@ -90,7 +90,12 @@ export function computeMatchPct(
 		totalWeight += weight;
 	}
 
-	if (totalWeight === 0) return scores.scoreWalkability ?? 50;
+	if (totalWeight === 0) {
+		// No quiz weights set — return unweighted average of all available scores
+		const all = (Object.keys(SCORE_CATEGORIES) as FilterWeightKey[])
+			.map((k) => (scores[k] as number | null) ?? 50);
+		return Math.round(all.reduce((a, b) => a + b, 0) / all.length);
+	}
 	return Math.min(100, Math.max(0, Math.round(weightedSum / totalWeight)));
 }
 
@@ -116,7 +121,9 @@ export function computeCategoryScores(
 			totalWeight += weight;
 		}
 
-		result[cat] = totalWeight === 0 ? 50 : Math.round(weightedSum / totalWeight);
+		result[cat] = totalWeight === 0
+			? Math.round(keys.map((k) => (scores[k] as number | null) ?? 50).reduce((a, b) => a + b, 0) / Math.max(1, keys.length))
+			: Math.round(weightedSum / totalWeight);
 	}
 
 	return result;

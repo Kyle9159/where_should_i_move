@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { ArrowLeft, MapPin, Users, Home, TrendingUp, Shield, GraduationCap, CloudSun, Footprints } from "lucide-react";
 import { db } from "@/db";
 import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
+import { PersonalizedMatchBadge } from "@/components/city/PersonalizedMatchBadge";
 import { AISummary } from "@/components/city/AISummary";
 import { SaveCityButton } from "@/components/shared/SaveCityButton";
 import { NeighborhoodCards } from "@/components/city/NeighborhoodCards";
@@ -156,7 +157,7 @@ export default async function CityPage({ params }: Props) {
 						<ShareButtons slug={city.slug} cityName={city.name} stateId={city.stateId} score={score} />
 						<DownloadReportButton slug={city.slug} cityName={city.name} />
 						<SaveCityButton cityId={city.id} cityName={city.name} />
-						<MatchScoreBadge score={score} size="md" />
+						<PersonalizedMatchBadge filterScores={(fs ?? {}) as unknown as Record<string, number | null | undefined>} fallbackScore={score} size="md" />
 					</div>
 				</div>
 
