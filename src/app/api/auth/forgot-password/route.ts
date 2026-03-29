@@ -37,9 +37,9 @@ export async function POST(req: NextRequest) {
 		const { Resend } = await import("resend");
 		const resend = new Resend(process.env.RESEND_API_KEY);
 		await resend.emails.send({
-			from: process.env.EMAIL_FROM ?? "NextHome USA <notifications@nexthomeusa.com>",
+			from: process.env.EMAIL_FROM ?? "Where Should I Move <notifications@whereshouldimove.us>",
 			to: email,
-			subject: "Reset your NextHome USA password",
+			subject: "Reset your Where Should I Move password",
 			html: `
 				<div style="font-family:sans-serif;max-width:500px;margin:40px auto;background:#111;color:#e0e0e0;padding:32px;border-radius:16px;border:1px solid #222">
 					<h2 style="color:#00d4ff;margin-top:0">Reset your password</h2>

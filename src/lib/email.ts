@@ -4,7 +4,7 @@
  * When not configured, emails are silently skipped (dev-friendly).
  */
 
-const FROM = process.env.EMAIL_FROM ?? "NextHome USA <notifications@nexthomeusa.com>";
+const FROM = process.env.EMAIL_FROM ?? "Where Should I Move <notifications@whereshouldimove.us>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3010";
 
 // Lazy-initialise Resend only when the key is present, so builds/tests
@@ -45,7 +45,7 @@ function baseHtml(body: string) {
   <div class="brand"><span>Next</span>Home USA</div>
   ${body}
 </div>
-<div class="footer">NextHome USA · <a href="${APP_URL}/dashboard" style="color:#555">Manage account</a></div>
+<div class="footer">Where Should I Move · <a href="${APP_URL}/dashboard" style="color:#555">Manage account</a></div>
 </div></body></html>`;
 }
 
@@ -53,7 +53,7 @@ function baseHtml(body: string) {
 export async function sendWelcomeEmail(to: string, name: string) {
 	await send({
 		to,
-		subject: "Welcome to NextHome USA 🏠",
+		subject: "Welcome to Where Should I Move 🏠",
 		html: baseHtml(`
 			<h1>Welcome, ${name ?? "explorer"}!</h1>
 			<p>You're all set to start your relocation research. Explore 1,000+ US cities, take our AI quiz for personalized matches, and save cities to your Move Plan.</p>
@@ -68,7 +68,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
 export async function sendSubscriptionConfirmedEmail(to: string, name: string, planLabel: string) {
 	await send({
 		to,
-		subject: "You're now a NextHome USA Premium member ✨",
+		subject: "You're now a Where Should I Move Premium member ✨",
 		html: baseHtml(`
 			<h1>Premium unlocked!</h1>
 			<p>Thanks for subscribing to <strong>${planLabel}</strong>. You now have access to:</p>
@@ -89,7 +89,7 @@ export async function sendSubscriptionConfirmedEmail(to: string, name: string, p
 export async function sendPaymentFailedEmail(to: string, name: string) {
 	await send({
 		to,
-		subject: "Action needed: Payment failed for NextHome USA Premium",
+		subject: "Action needed: Payment failed for Where Should I Move Premium",
 		html: baseHtml(`
 			<h1>We couldn't process your payment</h1>
 			<p>Hi ${name ?? "there"}, your most recent Premium subscription payment didn't go through. Your account has been downgraded to the free plan.</p>
@@ -104,7 +104,7 @@ export async function sendPaymentFailedEmail(to: string, name: string) {
 export async function sendSubscriptionCancelledEmail(to: string, name: string, endsAt: string) {
 	await send({
 		to,
-		subject: "Your NextHome USA Premium subscription has been cancelled",
+		subject: "Your Where Should I Move Premium subscription has been cancelled",
 		html: baseHtml(`
 			<h1>Subscription cancelled</h1>
 			<p>Hi ${name ?? "there"}, your Premium subscription has been cancelled. You'll retain Premium access until <strong>${endsAt}</strong>.</p>
@@ -121,7 +121,7 @@ export async function sendReviewApprovedEmail(to: string, cityName: string, city
 		subject: `Your review of ${cityName} is live!`,
 		html: baseHtml(`
 			<h1>Your review is published</h1>
-			<p>Your review of <strong>${cityName}</strong> has been approved and is now live for other movers to read. Thanks for contributing to the NextHome USA community!</p>
+			<p>Your review of <strong>${cityName}</strong> has been approved and is now live for other movers to read. Thanks for contributing to the WhereShouldIMove community!</p>
 			<a class="btn" href="${APP_URL}/city/${citySlug}">View your review</a>
 		`),
 	});

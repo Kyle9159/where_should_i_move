@@ -55,9 +55,9 @@ export const authOptions: NextAuthOptions = {
 						const verifyUrl = `${APP_URL}/api/auth/verify-email?token=${verifyToken}`;
 						import("resend").then(({ Resend }) => {
 							new Resend(process.env.RESEND_API_KEY!).emails.send({
-								from: process.env.EMAIL_FROM ?? "NextHome USA <notifications@nexthomeusa.com>",
+								from: process.env.EMAIL_FROM ?? "Where Should I Move <notifications@whereshouldimove.us>",
 								to: email,
-								subject: "Verify your NextHome USA email",
+								subject: "Verify your Where Should I Move email",
 								html: `<div style="font-family:sans-serif;max-width:500px;margin:40px auto;background:#111;color:#e0e0e0;padding:32px;border-radius:16px;border:1px solid #222"><h2 style="color:#00d4ff;margin-top:0">Verify your email</h2><p>Click below to verify your account.</p><a href="${verifyUrl}" style="display:inline-block;background:#00d4ff;color:#000;padding:12px 24px;border-radius:10px;font-weight:600;text-decoration:none">Verify Email</a></div>`,
 							}).catch(() => {});
 						}).catch(() => {});

@@ -5,7 +5,7 @@ import { UpgradeButton } from "@/components/shared/UpgradeButton";
 
 export const metadata: Metadata = {
 	title: "Upgrade to Premium",
-	description: "Unlock the full NextHome USA experience — PDF reports, Surprise Me AI, and more.",
+	description: "Unlock the full Where Should I Move experience — PDF reports, Surprise Me AI, and more.",
 };
 
 const FREE_FEATURES = [
@@ -51,7 +51,7 @@ export default function UpgradePage() {
 						className="inline-flex items-center gap-2 text-sm px-4 py-1.5 rounded-full mb-4"
 						style={{ background: "oklch(18% 0.06 200)", color: "var(--color-accent)" }}
 					>
-						<Sparkles size={13} /> NextHome USA Premium
+						<Sparkles size={13} /> Where Should I Move Premium
 					</div>
 					<h1 className="text-4xl font-bold mb-3">
 						Find your city,{" "}

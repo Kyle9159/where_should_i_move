@@ -1,13 +1,5 @@
 import type { NextConfig } from "next";
 
-// ── Environment validation ────────────────────────────────────────────────────
-const required = ["DATABASE_URL", "NEXTAUTH_SECRET", "NEXTAUTH_URL"];
-for (const key of required) {
-	if (!process.env[key]) {
-		throw new Error(`Missing required environment variable: ${key}`);
-	}
-}
-
 // ── Security headers ──────────────────────────────────────────────────────────
 const securityHeaders = [
 	{ key: "X-DNS-Prefetch-Control", value: "on" },
@@ -33,6 +25,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+	output: "standalone",
 	images: {
 		remotePatterns: [
 			{ protocol: "https", hostname: "images.unsplash.com" },

@@ -175,7 +175,7 @@ export default async function LandingPage() {
 
 			{/* Footer */}
 			<footer className="mt-auto px-6 py-6 text-center text-xs border-t" style={{ borderColor: "var(--color-border)", color: "var(--color-muted)" }}>
-				NextHome USA · Data: Census, BLS, FBI, NOAA, GreatSchools &amp; more.
+				Where Should I Move · Data: Census, BLS, FBI, NOAA, GreatSchools &amp; more.
 			</footer>
 		</main>
 	);

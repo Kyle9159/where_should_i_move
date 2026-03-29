@@ -148,10 +148,10 @@ export function CompareReportPdf({ cities, generatedAt }: { cities: CityData[]; 
 	const cityNames = cities.map((c) => `${c.name}, ${c.stateId}`).join(" vs ");
 
 	return (
-		<Document title={`NextHome USA — ${cityNames}`} author="NextHome USA">
+		<Document title={`Where Should I Move — ${cityNames}`} author="Where Should I Move">
 			<Page size="A4" orientation="landscape" style={styles.page}>
 				<View style={styles.header}>
-					<Text style={styles.brand}>NextHome USA</Text>
+					<Text style={styles.brand}>Where Should I Move</Text>
 					<Text style={styles.title}>City Comparison Report</Text>
 					<Text style={styles.subtitle}>{cityNames} · Generated {date}</Text>
 				</View>
@@ -195,7 +195,7 @@ export function CompareReportPdf({ cities, generatedAt }: { cities: CityData[]; 
 				</View>
 
 				<View style={styles.footer} fixed>
-					<Text style={styles.footerText}>NextHome USA · nexthomeusa.com</Text>
+					<Text style={styles.footerText}>Where Should I Move · whereshouldimove.us</Text>
 					<Text style={styles.footerText}>Cyan = best value · Data: Census, BLS, NOAA, FBI UCR</Text>
 					<Text style={styles.footerText}>{date}</Text>
 				</View>

@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 		where: (c, { eq }) => eq(c.slug, slug),
 		with: { state: true, housing: true, jobs: true, climate: true },
 	});
-	if (!city) return { title: "City Not Found — NextHome USA" };
+	if (!city) return { title: "City Not Found — Where Should I Move" };
 
 	const price = city.housing?.medianHomePrice
 		? `Median home $${Math.round(city.housing.medianHomePrice / 1000)}k.`
@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 	const ogImage = city.heroImageUrl ?? `${appUrl}/og-default.png`;
 
 	return {
-		title: `${city.name}, ${city.state?.abbreviation ?? city.stateId} — Relocation Guide | NextHome USA`,
+		title: `${city.name}, ${city.state?.abbreviation ?? city.stateId} — Relocation Guide | Where Should I Move`,
 		description,
 		openGraph: {
 			title: `Move to ${city.name}, ${city.state?.abbreviation ?? city.stateId}?`,
@@ -109,7 +109,7 @@ export default async function CityPage({ params }: Props) {
 	const catClimate = avg(fs?.scoreWeather, fs?.scoreAirQuality, fs?.scoreSunnyDays, fs?.scoreNaturalDisasterRisk);
 
 	const score = Math.round(city.overallScore ?? 50);
-	const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://nexthomeusa.com";
+	const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://whereshouldimove.us";
 
 	const jsonLd = {
 		"@context": "https://schema.org",

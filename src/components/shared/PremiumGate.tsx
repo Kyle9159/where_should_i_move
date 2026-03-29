@@ -29,7 +29,7 @@ export function PremiumGate({ children, feature = "this feature" }: Props) {
 			<div>
 				<p className="font-semibold mb-1">Premium Feature</p>
 				<p className="text-sm" style={{ color: "var(--color-muted)" }}>
-					Unlock {feature} with NextHome USA Premium.
+					Unlock {feature} with Where Should I Move Premium.
 				</p>
 			</div>
 			<UpgradeButton />

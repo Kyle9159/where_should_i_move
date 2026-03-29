@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
-	const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://nexthomeusa.com";
+	const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://whereshouldimove.us";
 	return {
 		rules: [{ userAgent: "*", allow: "/", disallow: ["/api/", "/dashboard/"] }],
 		sitemap: `${appUrl}/sitemap.xml`,

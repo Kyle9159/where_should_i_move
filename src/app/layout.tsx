@@ -15,22 +15,22 @@ const geistMono = Geist_Mono({
 	subsets: ["latin"],
 });
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://nexthomeusa.com";
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://whereshouldimove.us";
 const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 export const metadata: Metadata = {
 	metadataBase: new URL(appUrl),
 	title: {
-		default: "NextHome USA — Find Where You Belong",
-		template: "%s | NextHome USA",
+		default: "Where Should I Move — Find Your Next Home",
+		template: "%s | Where Should I Move",
 	},
 	description:
 		"Intelligent US relocation research. Compare 55+ filters, AI-powered quiz, and ranked city results across 1,000 US cities. Find your perfect new home.",
 	keywords: ["relocation", "moving", "best cities to live", "cost of living", "city comparison", "where to move"],
 	openGraph: {
 		type: "website",
-		siteName: "NextHome USA",
-		title: "NextHome USA — Find Where You Belong",
+		siteName: "Where Should I Move",
+		title: "Where Should I Move — Find Your Next Home",
 		description: "AI-powered US city comparison. 55+ filters, 1,000 cities, personalized rankings.",
 	},
 	twitter: { card: "summary_large_image" },
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
 	appleWebApp: {
 		capable: true,
 		statusBarStyle: "black-translucent",
-		title: "NextHome USA",
+		title: "Where Should I Move",
 	},
 	formatDetection: { telephone: false },
 };

@@ -9,7 +9,7 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 // Price IDs are set in the Stripe dashboard, then added to env.
-// Create one Product "NextHome USA Premium" with two prices:
+// Create one Product "Where Should I Move Premium" with two prices:
 //   Monthly: $9/mo   → STRIPE_PREMIUM_MONTHLY_PRICE_ID
 //   Yearly:  $79/yr  → STRIPE_PREMIUM_YEARLY_PRICE_ID
 export const PREMIUM_MONTHLY_PRICE_ID = process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID!;

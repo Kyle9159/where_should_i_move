@@ -132,12 +132,12 @@ export function CityReportPdf({ city, generatedAt }: { city: CityData; generated
 	const score = Math.round(city.overallScore ?? 50);
 
 	return (
-		<Document title={`${city.name} Relocation Report — NextHome USA`} author="NextHome USA">
+		<Document title={`${city.name} Relocation Report — Where Should I Move`} author="Where Should I Move">
 			<Page size="A4" style={styles.page}>
 				{/* Header */}
 				<View style={styles.header}>
 					<View style={styles.brandRow}>
-						<Text style={styles.brand}>NextHome USA</Text>
+						<Text style={styles.brand}>Where Should I Move</Text>
 						<Text style={styles.brandSub}> · Relocation Research Platform</Text>
 					</View>
 					<Text style={styles.cityName}>{city.name}, {city.stateId}</Text>
@@ -281,7 +281,7 @@ export function CityReportPdf({ city, generatedAt }: { city: CityData; generated
 
 				{/* Footer */}
 				<View style={styles.footer}>
-					<Text style={styles.footerText}>NextHome USA — nexthomeusa.com</Text>
+					<Text style={styles.footerText}>Where Should I Move — whereshouldimove.us</Text>
 					<Text style={styles.footerText}>Data sourced from Census, BLS, NOAA, GreatSchools, FBI UCR</Text>
 					<Text style={styles.footerText}>{new Date(generatedAt).toLocaleDateString()}</Text>
 				</View>

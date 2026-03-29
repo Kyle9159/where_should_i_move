@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
 	return {
-		name: "NextHome USA — AI Relocation Research",
-		short_name: "NextHome USA",
+		name: "Where Should I Move — AI Relocation Research",
+		short_name: "Where Should I Move",
 		description: "Discover, compare, and research the best US cities to live in with AI-powered insights.",
 		start_url: "/",
 		display: "standalone",

@@ -16,9 +16,9 @@ export function ShareButtons({ cityName, stateId, slug, score }: Props) {
 
 	const url = typeof window !== "undefined"
 		? `${window.location.origin}/city/${slug}`
-		: `https://nexthomeusa.com/city/${slug}`;
+		: `https://whereshouldimove.us/city/${slug}`;
 
-	const text = `Checking out ${cityName}, ${stateId}${score ? ` (score: ${score}/100)` : ""} on NextHome USA — the AI relocation research platform 🏠`;
+	const text = `Checking out ${cityName}, ${stateId}${score ? ` (score: ${score}/100)` : ""} on Where Should I Move — the AI relocation research platform 🏠`;
 
 	function copyLink() {
 		navigator.clipboard.writeText(url).then(() => {
@@ -45,7 +45,7 @@ export function ShareButtons({ cityName, stateId, slug, score }: Props) {
 	async function handleNativeShare() {
 		if (navigator.share) {
 			try {
-				await navigator.share({ title: `${cityName}, ${stateId} — NextHome USA`, text, url });
+				await navigator.share({ title: `${cityName}, ${stateId} — Where Should I Move`, text, url });
 				return;
 			} catch {
 				// User cancelled or not supported — fall through to popover
