@@ -30,7 +30,8 @@
     "db:enrich:demographics": "npx tsx src/db/enrich-demographics.ts",
     "db:normalize": "npx tsx src/db/normalize-batch.ts",
     "db:normalize:all": "ALL=1 npx tsx src/db/normalize-batch.ts",
-    "db:seed:neighborhoods": "npx tsx src/db/seed-neighborhoods.ts"
+    "db:seed:neighborhoods": "npx tsx src/db/seed-neighborhoods.ts",
+    "db:seed:photos:priority": "npx tsx src/db/seed-photos-priority.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

@@ -37,7 +37,6 @@ export async function GET(req: NextRequest) {
 	// Fetch cities with filter scores using relational query
 	const allCities = await db.query.cities.findMany({
 		with: { filterScores: true },
-		limit: 500,
 	});
 
 	// Filter by state/tier
