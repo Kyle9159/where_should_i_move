@@ -9,9 +9,12 @@ export interface QuizAnswers {
 	q6_work: "remote" | "find-local" | "self-employed" | "retired";
 	q7_outdoors: string[]; // multi-select
 	q8_budget: { min: number; max: number };
+	q9_vibe: "urban" | "suburban" | "college-town" | "tech-hub";
+	q10_healthcare: number; // 0–10 (0=not a priority, 10=very important)
+	q11_taxes: "sensitive" | "somewhat" | "not-a-factor";
 }
 
-export type QuizStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type QuizStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
 
 export const QUIZ_QUESTIONS: Record<QuizStep, { title: string; subtitle: string; type: "multi-card" | "single-card" | "slider" | "range" | "multi-select" }> = {
 	1: {
@@ -54,6 +57,21 @@ export const QUIZ_QUESTIONS: Record<QuizStep, { title: string; subtitle: string;
 		subtitle: "Rent or mortgage, all-in",
 		type: "range",
 	},
+	9: {
+		title: "What community vibe fits you best?",
+		subtitle: "Choose the environment that feels like home",
+		type: "single-card",
+	},
+	10: {
+		title: "How important is healthcare access?",
+		subtitle: "Proximity to hospitals, specialists, and quality care",
+		type: "slider",
+	},
+	11: {
+		title: "How sensitive are you to taxes and cost of living?",
+		subtitle: "State income tax and overall cost-of-living differences",
+		type: "single-card",
+	},
 };
 
 export const Q1_OPTIONS = [
@@ -76,6 +94,13 @@ export const Q7_OPTIONS = [
 	{ id: "lakes", label: "Lakes & Rivers", icon: "🏞️", weights: { scoreNearLake: 0.10 } },
 	{ id: "cycling", label: "Cycling", icon: "🚴", weights: { scoreBikeability: 0.08 } },
 	{ id: "none", label: "Not important", icon: "🏙️", weights: {} },
+] as const;
+
+export const Q9_OPTIONS = [
+	{ id: "urban", label: "Urban & Walkable", icon: "🏙️", desc: "City center, transit, walkable streets" },
+	{ id: "suburban", label: "Suburban Family", icon: "🏘️", desc: "Good schools, quiet streets, space" },
+	{ id: "college-town", label: "College Town", icon: "🎓", desc: "Young energy, arts, culture, diversity" },
+	{ id: "tech-hub", label: "Tech / Startup Hub", icon: "💻", desc: "Innovation, networking, high salaries" },
 ] as const;
 
 /**
@@ -145,6 +170,55 @@ export function buildDeterministicWeights(answers: QuizAnswers): FilterWeights {
 			const k = key as keyof FilterWeights;
 			weights[k] = (weights[k] ?? 0) + val / Math.max(answers.q7_outdoors.length, 1);
 		}
+	}
+
+	// Q8: budget → weight affordability based on how tight the budget is
+	const budget = answers.q8_budget?.max ?? 4000;
+	if (budget <= 1500) {
+		weights.scoreMedianRent = (weights.scoreMedianRent ?? 0) + 0.10;
+		weights.scoreCostOfLiving = (weights.scoreCostOfLiving ?? 0) + 0.08;
+	} else if (budget <= 2500) {
+		weights.scoreMedianRent = (weights.scoreMedianRent ?? 0) + 0.06;
+		weights.scoreCostOfLiving = (weights.scoreCostOfLiving ?? 0) + 0.04;
+	}
+
+	// Q9: community vibe
+	if (answers.q9_vibe === "urban") {
+		weights.scoreWalkability = (weights.scoreWalkability ?? 0) + 0.10;
+		weights.scoreTransit = (weights.scoreTransit ?? 0) + 0.08;
+		weights.scoreRestaurants = (weights.scoreRestaurants ?? 0) + 0.06;
+		weights.scoreNightlife = (weights.scoreNightlife ?? 0) + 0.05;
+	} else if (answers.q9_vibe === "suburban") {
+		weights.scoreSchoolQuality = (weights.scoreSchoolQuality ?? 0) + 0.08;
+		weights.scorePropertyCrime = (weights.scorePropertyCrime ?? 0) + 0.07;
+		weights.scoreGreenSpace = (weights.scoreGreenSpace ?? 0) + 0.06;
+		weights.scoreHomeownership = (weights.scoreHomeownership ?? 0) + 0.05;
+	} else if (answers.q9_vibe === "college-town") {
+		weights.scoreCollegeTown = (weights.scoreCollegeTown ?? 0) + 0.12;
+		weights.scoreArtsAndCulture = (weights.scoreArtsAndCulture ?? 0) + 0.07;
+		weights.scoreDiversity = (weights.scoreDiversity ?? 0) + 0.06;
+	} else if (answers.q9_vibe === "tech-hub") {
+		weights.scoreTechHub = (weights.scoreTechHub ?? 0) + 0.12;
+		weights.scoreJobMarket = (weights.scoreJobMarket ?? 0) + 0.06;
+		weights.scoreBroadband = (weights.scoreBroadband ?? 0) + 0.06;
+	}
+
+	// Q10: healthcare importance (0-10 → 0-0.12)
+	const healthWeight = ((answers.q10_healthcare ?? 0) / 10) * 0.12;
+	if (healthWeight > 0) {
+		weights.scoreHealthcare = (weights.scoreHealthcare ?? 0) + healthWeight;
+		if ((answers.q10_healthcare ?? 0) >= 6) {
+			weights.scoreAirQuality = (weights.scoreAirQuality ?? 0) + healthWeight * 0.4;
+		}
+	}
+
+	// Q11: tax sensitivity
+	if (answers.q11_taxes === "sensitive") {
+		weights.scoreTaxBurden = (weights.scoreTaxBurden ?? 0) + 0.09;
+		weights.scoreCostOfLiving = (weights.scoreCostOfLiving ?? 0) + 0.06;
+	} else if (answers.q11_taxes === "somewhat") {
+		weights.scoreTaxBurden = (weights.scoreTaxBurden ?? 0) + 0.04;
+		weights.scoreCostOfLiving = (weights.scoreCostOfLiving ?? 0) + 0.03;
 	}
 
 	// Always add baseline safety weight

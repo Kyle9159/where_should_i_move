@@ -15,19 +15,25 @@ const QuizAnswersSchema = z.object({
 		q6_work: z.enum(["remote", "find-local", "self-employed", "retired"]),
 		q7_outdoors: z.array(z.string()),
 		q8_budget: z.object({ min: z.number(), max: z.number() }),
+		q9_vibe: z.enum(["urban", "suburban", "college-town", "tech-hub"]),
+		q10_healthcare: z.number().min(0).max(10),
+		q11_taxes: z.enum(["sensitive", "somewhat", "not-a-factor"]),
 	}),
 });
 
 const FILTER_KEYS = [
-	"scoreMedianHomePrice", "scoreMedianRent", "scoreCostOfLiving",
+	"scoreMedianHomePrice", "scoreMedianRent", "scorePriceToRent", "scoreCostOfLiving",
 	"scoreTaxBurden", "scoreJobMarket", "scoreUnemployment", "scoreIncomeGrowth",
+	"scoreMedianIncome", "scoreAffordabilityIndex",
 	"scoreWalkability", "scoreTransit", "scoreBikeability", "scoreRestaurants",
 	"scoreNightlife", "scoreArtsAndCulture", "scoreDiversity", "scoreLgbtqFriendly",
-	"scoreWeather", "scoreAirQuality", "scoreSunnyDays", "scoreWarmClimate",
+	"scoreCollegeEducated", "scoreMedAge", "scoreHomeownership", "scoreCollegeTown", "scoreTechHub",
+	"scoreWeather", "scoreAirQuality", "scoreSunnyDays", "scoreWarmClimate", "scoreLowHumidity",
 	"scoreNaturalDisasterRisk", "scoreViolentCrime", "scorePropertyCrime",
-	"scoreSchoolQuality", "scoreChildcare", "scoreHealthcare",
+	"scoreSchoolQuality", "scoreHighSchool", "scoreGraduationRate", "scoreChildcare", "scorePupilSpending",
+	"scoreHealthcare", "scoreBroadband", "scorePopulationGrowth",
 	"scoreNearOcean", "scoreNearMountains", "scoreNearLake", "scoreTrails",
-	"scoreNationalPark", "scoreBroadband",
+	"scoreNationalPark", "scoreGreenSpace",
 ] as const;
 
 const SYSTEM_PROMPT = `You are a relocation advisor AI. Given quiz answers about someone's ideal place to live, produce a JSON object where:

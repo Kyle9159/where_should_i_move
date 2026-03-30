@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Sparkles, Check } from "lucide-react";
-import { QUIZ_QUESTIONS, Q1_OPTIONS, Q7_OPTIONS } from "@/lib/quizConfig";
+import { QUIZ_QUESTIONS, Q1_OPTIONS, Q7_OPTIONS, Q9_OPTIONS } from "@/lib/quizConfig";
 import type { QuizAnswers } from "@/lib/quizConfig";
 import { cn } from "@/lib/utils";
 
 const INITIAL_ANSWERS: Partial<QuizAnswers> = {};
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
 
 export default function QuizPage() {
 	const router = useRouter();
@@ -17,7 +17,7 @@ export default function QuizPage() {
 	const [answers, setAnswers] = useState<Partial<QuizAnswers>>(INITIAL_ANSWERS);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const progress = (step / 8) * 100;
+	const progress = (step / 11) * 100;
 
 	function updateAnswer<K extends keyof QuizAnswers>(key: K, value: QuizAnswers[K]) {
 		setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -33,6 +33,9 @@ export default function QuizPage() {
 			case 6: return !!answers.q6_work;
 			case 7: return (answers.q7_outdoors?.length ?? 0) >= 1;
 			case 8: return !!answers.q8_budget;
+			case 9: return !!answers.q9_vibe;
+			case 10: return answers.q10_healthcare !== undefined;
+			case 11: return !!answers.q11_taxes;
 			default: return false;
 		}
 	}
@@ -54,6 +57,9 @@ export default function QuizPage() {
 						q6_work: answers.q6_work ?? "remote",
 						q7_outdoors: answers.q7_outdoors ?? [],
 						q8_budget: answers.q8_budget ?? { min: 1500, max: 4000 },
+						q9_vibe: answers.q9_vibe ?? "urban",
+						q10_healthcare: answers.q10_healthcare ?? 5,
+						q11_taxes: answers.q11_taxes ?? "somewhat",
 					},
 				}),
 			});
@@ -81,7 +87,7 @@ export default function QuizPage() {
 			<div className="w-full max-w-2xl mb-8">
 				<div className="flex items-center justify-between mb-4">
 					<span className="text-sm font-medium" style={{ color: "var(--color-muted)" }}>
-						Step {step} of 8
+						Step {step} of 11
 					</span>
 					<span className="text-sm font-medium" style={{ color: "var(--color-accent)" }}>
 						{Math.round(progress)}%
@@ -174,6 +180,30 @@ export default function QuizPage() {
 						onChange={(v) => updateAnswer("q8_budget", v)}
 					/>
 				)}
+				{step === 9 && (
+					<SingleCardQ
+						options={Q9_OPTIONS.map((o) => ({ ...o }))}
+						selected={answers.q9_vibe}
+						onChange={(v) => updateAnswer("q9_vibe", v as QuizAnswers["q9_vibe"])}
+					/>
+				)}
+				{step === 10 && (
+					<HealthcareSlider
+						value={answers.q10_healthcare ?? 5}
+						onChange={(v) => updateAnswer("q10_healthcare", v)}
+					/>
+				)}
+				{step === 11 && (
+					<SingleCardQ
+						options={[
+							{ id: "sensitive", label: "Very sensitive", icon: "💸", desc: "No/low income tax states preferred" },
+							{ id: "somewhat", label: "Somewhat", icon: "🤔", desc: "I'd like reasonable taxes" },
+							{ id: "not-a-factor", label: "Not a factor", icon: "🙂", desc: "Taxes don't influence my choice" },
+						]}
+						selected={answers.q11_taxes}
+						onChange={(v) => updateAnswer("q11_taxes", v as QuizAnswers["q11_taxes"])}
+					/>
+				)}
 			</div>
 
 			{/* Navigation */}
@@ -188,7 +218,7 @@ export default function QuizPage() {
 					<ArrowLeft size={16} /> Back
 				</button>
 
-				{step < 8 ? (
+				{step < 11 ? (
 					<button
 						type="button"
 						onClick={() => setStep((s) => (s + 1) as Step)}
@@ -428,6 +458,43 @@ function BudgetSlider({
 			<div className="flex justify-between text-xs" style={{ color: "var(--color-muted)" }}>
 				<span>$800/mo</span>
 				<span>$8,000+/mo</span>
+			</div>
+		</div>
+	);
+}
+
+function HealthcareSlider({
+	value,
+	onChange,
+}: {
+	value: number;
+	onChange: (v: number) => void;
+}) {
+	const labels = ["Not a priority", "Low priority", "Somewhat important", "Very important", "Critical factor"];
+	const labelIdx = Math.round((value / 10) * (labels.length - 1));
+
+	return (
+		<div className="space-y-6">
+			<div className="text-center">
+				<span className="text-lg font-semibold" style={{ color: "var(--color-accent)" }}>
+					{labels[labelIdx]}
+				</span>
+			</div>
+			<input
+				type="range"
+				min={0}
+				max={10}
+				step={1}
+				value={value}
+				onChange={(e) => onChange(parseInt(e.target.value, 10))}
+				className="w-full h-2 appearance-none cursor-pointer rounded-full"
+				style={{
+					background: `linear-gradient(to right, var(--color-accent) ${value * 10}%, var(--color-border) ${value * 10}%)`,
+				}}
+			/>
+			<div className="flex justify-between text-xs" style={{ color: "var(--color-muted)" }}>
+				<span>🙂 Not a priority</span>
+				<span>🏥 Critical factor</span>
 			</div>
 		</div>
 	);
