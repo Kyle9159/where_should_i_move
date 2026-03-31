@@ -612,12 +612,7 @@ const FILTER_CATEGORIES = [
 			{ key: "scorePopulationGrowth", label: "Growth Trajectory", icon: "📈" },
 		],
 	},
-	{
-		id: "demographics",
-		label: "Demographics",
-		icon: "👥",
-		filters: [
-			{ key: "scoreDiversity", label: "Diversity", icon: "🌍" },
+	{ id: "demographics", label: "Demographics", icon: "👥", filters: [
 			{ key: "scoreCollegeEducated", label: "College Educated", icon: "🎓" },
 			{ key: "scoreHomeownership", label: "Homeownership Rate", icon: "🏠" },
 			{ key: "scoreMedAge", label: "Young City", icon: "⚡" },

@@ -33,6 +33,7 @@ export async function computeAllScores(db: DB, cityIds?: string[]): Promise<numb
 	const cities = db.query.cities.findMany({
 		where: cityIds?.length ? (c, { inArray }) => inArray(c.id, cityIds) : undefined,
 		with: {
+			state: true,
 			housing: true,
 			jobs: true,
 			climate: true,
@@ -57,6 +58,37 @@ export async function computeAllScores(db: DB, cityIds?: string[]): Promise<numb
 		const w = city.walkability;
 		const d = city.demographics;
 		const l = city.lifestyle;
+		const st = city.state;
+
+		// Arts & Culture: venue count if available, else population-based proxy
+		const artsVenues = (l?.artMuseumCount ?? 0) + (l?.theaterCount ?? 0);
+		const artsScore = (l?.artMuseumCount != null || l?.theaterCount != null)
+			? minMaxNorm(artsVenues, 0, 15)
+			: minMaxNorm(city.population, 30_000, 2_500_000);
+
+		// Tech hub: proxy from median income + college-educated share
+		const techHubScore = (j?.medianHouseholdIncome != null && d?.pctCollegeEducated != null)
+			? Math.round(
+				minMaxNorm(j.medianHouseholdIncome, 40_000, 130_000) * 0.5 +
+				minMaxNorm(d.pctCollegeEducated, 0.15, 0.80) * 0.5
+			)
+			: j?.medianHouseholdIncome != null
+				? minMaxNorm(j.medianHouseholdIncome, 40_000, 130_000)
+				: 50;
+
+		// College town: proximity flag + graduation rate signal
+		const collegeTownScore = sc?.collegeProximity
+			? Math.min(100, Math.round(70 + minMaxNorm(sc?.graduationRate, 50, 95) * 0.3))
+			: sc?.graduationRate != null
+				? Math.round(minMaxNorm(sc.graduationRate, 50, 95) * 0.5)
+				: 50;
+
+		// National park proximity
+		const nationalParkScore = l?.nearNationalPark
+			? 100
+			: l?.distanceToNationalPark != null
+				? invertNorm(l.distanceToNationalPark, 0, 300)
+				: 50;
 
 		// Composite weather comfort score (sunny days + mild temps)
 		const weatherScore = Math.round(
@@ -88,12 +120,12 @@ export async function computeAllScores(db: DB, cityIds?: string[]): Promise<numb
 			scoreMedianHomePrice: invertNorm(h?.medianHomePrice, 150_000, 900_000),
 			scoreMedianRent: invertNorm(h?.medianRent2Bed, 700, 3500),
 			scorePriceToRent: minMaxNorm(h?.priceToRentRatio, 10, 30),
-			scoreCostOfLiving: 50, // placeholder until COL data integrated
+			scoreCostOfLiving: st?.costIndex != null ? invertNorm(st.costIndex, 89, 193) : 50,
 			scoreJobMarket: minMaxNorm(j?.jobGrowthRate, -1, 5),
 			scoreUnemployment: invertNorm(j?.unemploymentRate, 2, 10),
 			scoreIncomeGrowth: minMaxNorm(j?.wageGrowthRate, -1, 8),
 			scoreMedianIncome: minMaxNorm(j?.medianHouseholdIncome, 35_000, 130_000),
-			scoreTaxBurden: 50, // placeholder
+			scoreTaxBurden: st?.taxBurden != null ? invertNorm(st.taxBurden, 5, 16) : 50,
 			scoreAffordabilityIndex: minMaxNorm(h?.affordabilityIndex, 0.2, 1.2),
 
 			// Lifestyle
@@ -102,14 +134,14 @@ export async function computeAllScores(db: DB, cityIds?: string[]): Promise<numb
 			scoreBikeability: minMaxNorm(w?.bikeScore, 0, 100),
 			scoreRestaurants: l?.restaurantsPerCapita != null ? minMaxNorm(l.restaurantsPerCapita, 0, 30) : 50,
 			scoreNightlife: l?.barsNightlifePerCapita != null ? minMaxNorm(l.barsNightlifePerCapita, 0, 15) : 50,
-			scoreArtsAndCulture: 50,
+			scoreArtsAndCulture: artsScore,
 			scoreDiversity: minMaxNorm((l?.diversityIndex ?? d?.diversityIndex), 0.2, 0.85),
 			scoreLgbtqFriendly: minMaxNorm(l?.lgbtqFriendlyScore, 30, 100),
 			scoreCollegeEducated: d?.pctCollegeEducated != null ? minMaxNorm(d.pctCollegeEducated, 0.15, 0.80) : 50,
 			scoreHomeownership: d?.homeownershipRate != null ? minMaxNorm(d.homeownershipRate, 0.35, 0.75) : 50,
 			scoreMedAge: l?.medianAge != null ? invertNorm(l.medianAge, 22, 60) : 50,
-			scoreCollegeTown: 50,
-			scoreTechHub: 50,
+			scoreCollegeTown: collegeTownScore,
+			scoreTechHub: techHubScore,
 
 			// Practical / Safety
 			scoreViolentCrime: invertNorm(s?.violentCrimeRate, 50, 2000),
@@ -134,9 +166,9 @@ export async function computeAllScores(db: DB, cityIds?: string[]): Promise<numb
 			scoreNearOcean: boolScore(l?.nearOcean),
 			scoreNearMountains: boolScore(l?.nearMountains),
 			scoreNearLake: boolScore(l?.nearLake),
-			scoreTrails: 50,
-			scoreNationalPark: 50,
-			scoreGreenSpace: 50,
+			scoreTrails: l?.trailsMilesNearby != null ? minMaxNorm(l.trailsMilesNearby, 0, 100) : 50,
+			scoreNationalPark: nationalParkScore,
+			scoreGreenSpace: l?.parksAcresPerCapita != null ? minMaxNorm(l.parksAcresPerCapita, 0, 5) : 50,
 			scoreLowHumidity: invertNorm(c?.humidityAvg, 20, 90),
 		};
 

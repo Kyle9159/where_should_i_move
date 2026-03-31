@@ -259,7 +259,7 @@ function CompareTable({ cities }: { cities: CityDetail[] }) {
 
 	// Determine which city has the best value for a given row
 	function getBestIdx(row: typeof SECTIONS[0]["rows"][0]): number | null {
-		if (!row.higherIsBetter === undefined) return null;
+		if (row.higherIsBetter === undefined) return null;
 		const values = cities.map((c) => {
 			const v = row.extract(c);
 			return typeof v === "number" ? v : null;

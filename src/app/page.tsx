@@ -20,7 +20,7 @@ const FEATURES = [
 ];
 
 const STATS = [
-	{ emoji: "🏙️", label: "55+ cities", sublabel: "with real data" },
+	{ emoji: "🏙️", label: "2,700+ cities", sublabel: "analyzed & scored" },
 	{ emoji: "📊", label: "55 filters", sublabel: "across 5 categories" },
 	{ emoji: "🤖", label: "AI-ranked", sublabel: "personalized Match %" },
 	{ emoji: "🔒", label: "Free forever", sublabel: "premium tier coming" },
