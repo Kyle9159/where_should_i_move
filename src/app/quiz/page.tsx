@@ -69,7 +69,7 @@ export default function QuizPage() {
 				if (typeof window !== "undefined") {
 					localStorage.setItem("quiz_weights", data.weightsEncoded);
 				}
-				router.push(`/explore?weights=${data.weightsEncoded}`);
+				router.push(`/quiz/results?weights=${data.weightsEncoded}`);
 			} else {
 				router.push("/explore");
 			}
