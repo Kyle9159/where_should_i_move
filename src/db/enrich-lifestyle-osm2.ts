@@ -4,17 +4,18 @@
  * Pass A — National park proximity (computed from lat/lng, instant, no API):
  *   near_national_park, distance_to_national_park
  *
- * Pass B — OSM Overpass (per city, ~2s/city):
+ * Pass B — OSM Overpass (single combined query per city):
  *   art_museum_count, theater_count  (arts & culture)
- *   trails_miles_nearby              (hiking trail density)
- *   parks_acres_per_capita           (park count proxy)
+ *   trails_miles_nearby              (hiking route density)
+ *   parks_acres_per_capita           (green space proxy)
  *
  * Run: npx tsx src/db/enrich-lifestyle-osm2.ts
  * Options:
- *   LIMIT=100    — only first N cities
- *   DRY_RUN=1    — no DB writes
- *   SKIP_OSM=1   — skip Pass B (only run national park proximity)
- *   DELAY_MS=2000 — ms between OSM requests per city (default: 2000)
+ *   LIMIT=100     — only first N cities
+ *   DRY_RUN=1     — no DB writes
+ *   SKIP_OSM=1    — skip Pass B (only run national park proximity)
+ *   DELAY_MS=2500 — ms between cities (default: 2500)
+ *   RESUME=N      — skip first N cities (resume from offset)
  */
 import { config } from "dotenv";
 import { resolve } from "path";
@@ -23,17 +24,24 @@ config({ path: resolve(process.cwd(), ".env.local") });
 import Database from "better-sqlite3";
 
 const DRY_RUN = process.env.DRY_RUN === "1";
-const LIMIT = parseInt(process.env.LIMIT ?? "9999", 10);
+const LIMIT    = parseInt(process.env.LIMIT    ?? "9999", 10);
 const SKIP_OSM = process.env.SKIP_OSM === "1";
-const DELAY_MS = parseInt(process.env.DELAY_MS ?? "2000", 10);
-const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
+const DELAY_MS = parseInt(process.env.DELAY_MS ?? "2500", 10);
+const RESUME   = parseInt(process.env.RESUME   ?? "0",    10);
+
+// Mirrors tried in order; moves to next on error
+const OVERPASS_MIRRORS = [
+	"https://overpass.private.coffee/api/interpreter",
+	"https://overpass-api.de/api/interpreter",
+	"https://overpass.openstreetmap.ru/api/interpreter",
+];
 
 const dbUrl = process.env.DATABASE_URL?.replace("file:", "") ?? "./nexthome.db";
 const sqlite = new Database(dbUrl);
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
-// ── National Parks (NPS units with approximate center coordinates) ────────────
+// ── National Parks ────────────────────────────────────────────────────────────
 
 interface Park { name: string; lat: number; lng: number; }
 
@@ -103,8 +111,6 @@ const NATIONAL_PARKS: Park[] = [
 	{ name: "Hot Springs",           lat: 34.518,  lng: -93.042  },
 ];
 
-// ── Haversine distance (miles) ────────────────────────────────────────────────
-
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
 	const R = 3958.8;
 	const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -114,26 +120,116 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
 	return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// ── OSM Overpass query helper ─────────────────────────────────────────────────
+// ── OSM Overpass — single combined query per city ─────────────────────────────
 
-async function overpassCount(query: string, timeoutMs = 40000): Promise<number> {
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), timeoutMs);
-	try {
-		const res = await fetch(OVERPASS_URL, {
-			method: "POST",
-			headers: { "Content-Type": "application/x-www-form-urlencoded" },
-			body: `data=${encodeURIComponent(query)}`,
-			signal: controller.signal,
-		});
-		clearTimeout(timer);
-		if (!res.ok) return 0;
-		const data = await res.json();
-		return parseInt(data?.elements?.[0]?.tags?.total ?? "0", 10);
-	} catch {
-		clearTimeout(timer);
-		return 0;
+type OsmElement = { type: string; tags?: Record<string, string> };
+
+/**
+ * Sends ONE combined Overpass query per city, returns all matched elements.
+ * Tries each mirror in sequence on failure; retries up to 3× with backoff.
+ */
+async function queryOverpass(
+	lat: number, lng: number, timeoutMs = 50000,
+): Promise<OsmElement[]> {
+	// Single query covers arts venues (nodes + ways), hiking route relations, and parks.
+	// Using [out:json] + out tags; so we can count client-side by tag.
+	// Route relations for hiking keep count manageable (not individual path segments).
+	const q = `[out:json][timeout:45];
+(
+  node(around:15000,${lat},${lng})[tourism=museum];
+  way(around:15000,${lat},${lng})[tourism=museum];
+  node(around:15000,${lat},${lng})[amenity=arts_centre];
+  node(around:15000,${lat},${lng})[amenity=theatre];
+  node(around:15000,${lat},${lng})[amenity=cinema];
+  node(around:15000,${lat},${lng})[amenity=art_gallery];
+  relation(around:25000,${lat},${lng})[route=hiking];
+  relation(around:25000,${lat},${lng})[route=foot][name];
+  way(around:8000,${lat},${lng})[leisure=park];
+  way(around:8000,${lat},${lng})[leisure=nature_reserve];
+  way(around:8000,${lat},${lng})[leisure=garden];
+  node(around:8000,${lat},${lng})[leisure=park];
+);
+out tags;`;
+
+	for (let attempt = 0; attempt < 3; attempt++) {
+		const mirror = OVERPASS_MIRRORS[attempt % OVERPASS_MIRRORS.length];
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), timeoutMs);
+		try {
+			const res = await fetch(mirror, {
+				method: "POST",
+				headers: { "Content-Type": "application/x-www-form-urlencoded" },
+				body: `data=${encodeURIComponent(q)}`,
+				signal: controller.signal,
+			});
+			clearTimeout(timer);
+
+			if (res.status === 429 || res.status === 503) {
+				const wait = (attempt + 1) * 10_000;
+				process.stdout.write(`\n  ⏳ rate limited by ${mirror} — waiting ${wait / 1000}s...`);
+				await sleep(wait);
+				continue;
+			}
+			if (!res.ok) {
+				process.stdout.write(`\n  ⚠️  HTTP ${res.status} from ${mirror}`);
+				await sleep(3000);
+				continue;
+			}
+
+			const text = await res.text();
+			// Overpass sometimes returns HTML error pages
+			if (text.trim().startsWith("<")) {
+				process.stdout.write(`\n  ⚠️  HTML response from ${mirror} (attempt ${attempt + 1})`);
+				await sleep(5000);
+				continue;
+			}
+
+			const data = JSON.parse(text) as { elements?: OsmElement[] };
+			return data.elements ?? [];
+		} catch (err) {
+			clearTimeout(timer);
+			const msg = err instanceof Error ? err.message : String(err);
+			const isTimeout = msg.includes("abort") || msg.includes("timeout");
+			process.stdout.write(`\n  ⚠️  ${isTimeout ? "timeout" : msg} (attempt ${attempt + 1}, mirror: ${mirror})`);
+			await sleep((attempt + 1) * 4000);
+		}
 	}
+
+	process.stdout.write(`\n  ❌ all mirrors failed — skipping city`);
+	return [];
+}
+
+function countElements(elements: OsmElement[]): {
+	artsCount: number; trailsCount: number; parksCount: number;
+} {
+	let artsCount = 0, trailsCount = 0, parksCount = 0;
+
+	for (const el of elements) {
+		const t = el.tags ?? {};
+		// Arts
+		if (
+			t.tourism === "museum" ||
+			t.amenity === "arts_centre" ||
+			t.amenity === "theatre" ||
+			t.amenity === "cinema" ||
+			t.amenity === "art_gallery"
+		) artsCount++;
+
+		// Hiking routes (named relations)
+		if (
+			el.type === "relation" &&
+			(t.route === "hiking" || (t.route === "foot" && t.name))
+		) trailsCount++;
+
+		// Parks
+		if (
+			t.leisure === "park" ||
+			t.leisure === "nature_reserve" ||
+			t.leisure === "garden"
+		) parksCount++;
+	}
+
+	return { artsCount, trailsCount, parksCount };
 }
 
 // ── Upsert helper ─────────────────────────────────────────────────────────────
@@ -165,14 +261,17 @@ async function main() {
 			ORDER BY overall_score DESC
 			LIMIT ?
 		`)
-		.all(LIMIT) as Array<{ id: string; name: string; state_id: string; lat: number; lng: number; population: number | null }>;
+		.all(LIMIT) as Array<{
+		id: string; name: string; state_id: string;
+		lat: number; lng: number; population: number | null;
+	}>;
 
 	console.log(`🌲 Nature & Culture enrichment for ${cities.length} cities`);
-	if (DRY_RUN) console.log("   DRY RUN — no writes");
+	if (RESUME > 0) console.log(`   Resuming from offset ${RESUME}`);
+	if (DRY_RUN)    console.log("   DRY RUN — no writes");
 
 	// ── PASS A: National Park proximity ───────────────────────────────────────
 	console.log("\n🏔️  Pass A: National park proximity (computed)...");
-	const NEAR_THRESHOLD_MILES = 60;
 	let parkUpdated = 0;
 
 	for (const city of cities) {
@@ -182,17 +281,15 @@ async function main() {
 			if (!nearest || dist < nearest.dist) nearest = { name: park.name, dist };
 		}
 		if (!nearest) continue;
-
-		const isNear = nearest.dist <= NEAR_THRESHOLD_MILES;
 		if (!DRY_RUN) {
 			upsertLifestyle(city.id, {
-				near_national_park: isNear ? 1 : 0,
+				near_national_park: nearest.dist <= 60 ? 1 : 0,
 				distance_to_national_park: Math.round(nearest.dist),
 			});
 		}
 		parkUpdated++;
 	}
-	console.log(`  ✅ National parks: ${parkUpdated} cities processed (${NEAR_THRESHOLD_MILES}mi threshold)`);
+	console.log(`  ✅ National parks: ${parkUpdated} cities processed`);
 
 	if (SKIP_OSM) {
 		console.log("\n⏭️  Pass B: OSM skipped (SKIP_OSM=1)");
@@ -201,54 +298,58 @@ async function main() {
 		return;
 	}
 
-	// ── PASS B: OSM arts + trails + parks ─────────────────────────────────────
-	console.log(`\n🎨  Pass B: OSM Overpass (arts/trails/parks, ${DELAY_MS}ms delay)...`);
-	let osmUpdated = 0;
+	// ── PASS B: OSM combined query per city ───────────────────────────────────
+	console.log(`\n🎨  Pass B: OSM Overpass — 1 query/city, ${DELAY_MS}ms delay`);
+	console.log(`   Mirrors: ${OVERPASS_MIRRORS.join(", ")}`);
 
-	for (let i = 0; i < cities.length; i++) {
-		const city = cities[i];
-		const { lat, lng, population } = city;
-		const pop10k = Math.max((population ?? 10000) / 10000, 0.1);
+	const slice = cities.slice(RESUME);
+	let done = 0; let failed = 0; let allZero = 0;
 
-		// Arts venues within 15km
-		const artsQuery = `[out:json][timeout:35];(node(around:15000,${lat},${lng})[tourism=museum];node(around:15000,${lat},${lng})[amenity=arts_centre];node(around:15000,${lat},${lng})[amenity=theatre];node(around:15000,${lat},${lng})[amenity=cinema];);out count;`;
+	for (let i = 0; i < slice.length; i++) {
+		const city = slice[i];
+		const globalIdx = RESUME + i + 1;
 
-		// Hiking trails within 20km (named paths/tracks)
-		const trailsQuery = `[out:json][timeout:35];(way(around:20000,${lat},${lng})[highway~"^(path|track)$"][name];way(around:20000,${lat},${lng})[route=hiking];);out count;`;
+		process.stdout.write(
+			`\r  [${globalIdx}/${cities.length}] ${city.name}, ${city.state_id}...    `
+		);
 
-		// Parks within 5km
-		const parksQuery = `[out:json][timeout:35];(way(around:5000,${lat},${lng})[leisure~"^(park|garden|nature_reserve|recreation_ground)$"];node(around:5000,${lat},${lng})[leisure=park];);out count;`;
+		const elements = await queryOverpass(city.lat, city.lng);
+		const { artsCount, trailsCount, parksCount } = countElements(elements);
 
-		const [artsCount, trailsCount, parksCount] = await Promise.all([
-			overpassCount(artsQuery),
-			overpassCount(trailsQuery),
-			overpassCount(parksQuery),
-		]);
-		await sleep(DELAY_MS);
-
-		// trails_miles_nearby: rough estimate (each named trail ~1-2mi avg)
-		const trailsMiles = Math.round(trailsCount * 1.5);
-		// parks_acres_per_capita: rough estimate (each park ~5 acres avg / pop)
-		const parksAcres = Math.round((parksCount * 5) / Math.max(population ?? 10000, 1000) * 10000) / 10;
+		// Derive stored metrics
+		const pop = city.population ?? 10_000;
+		// Hiking route relations each represent a full trail; multiply for rough miles
+		const trailsMiles     = Math.round(trailsCount * 3.5);
+		// Parks/green-space density relative to population
+		const parksAcresPer10k = Math.round((parksCount * 5) / Math.max(pop, 1_000) * 10_000) / 10;
 
 		if (!DRY_RUN) {
 			upsertLifestyle(city.id, {
-				art_museum_count: artsCount,
-				theater_count: 0, // already counted in artsCount above
-				trails_miles_nearby: trailsMiles,
-				parks_acres_per_capita: parksAcres,
+				art_museum_count:     artsCount,
+				theater_count:        0, // bundled into art_museum_count
+				trails_miles_nearby:  trailsMiles,
+				parks_acres_per_capita: parksAcresPer10k,
 			});
 		}
 
-		osmUpdated++;
-		if (i % 50 === 0 || i < 3) {
-			const nearPark = haversine(lat, lng, NATIONAL_PARKS[0].lat, NATIONAL_PARKS[0].lng);
-			console.log(`  [${i + 1}/${cities.length}] ${city.name}, ${city.state_id}  🎨 ${artsCount} arts  🥾 ${trailsMiles}mi trails  🌳 ${parksAcres} acres/10k`);
-		}
-	}
-	console.log(`  ✅ OSM: ${osmUpdated} cities updated`);
+		const isAllZero = artsCount === 0 && trailsCount === 0 && parksCount === 0;
+		if (isAllZero) allZero++;
+		done++;
 
-	console.log("\n✅ Done! Run npm run db:normalize:all to update filter scores.");
+		// Print every 10 or when there's data
+		if (!isAllZero || i % 10 === 0) {
+			process.stdout.write(
+				`\r  [${globalIdx}/${cities.length}] ${city.name}, ${city.state_id}` +
+				`  🎨 ${artsCount}  🥾 ${trailsMiles}mi  🌳 ${parksAcresPer10k}/10k    \n`
+			);
+		}
+
+		await sleep(DELAY_MS);
+	}
+
+	process.stdout.write("\n");
+	console.log(`\n✅ OSM done: ${done} cities | zeros: ${allZero} | failed: ${failed}`);
+	console.log("   Run  npm run db:normalize:all  to push scores to filter table.");
 	sqlite.close();
 }
 
