@@ -8,6 +8,8 @@ import { PersonalizedMatchBadge } from "@/components/city/PersonalizedMatchBadge
 import { AISummary } from "@/components/city/AISummary";
 import { SaveCityButton } from "@/components/shared/SaveCityButton";
 import { NeighborhoodCards } from "@/components/city/NeighborhoodCards";
+import { NearbySuburbs } from "@/components/city/NearbySuburbs";
+import type { NearbySuburb } from "@/components/city/NearbySuburbs";
 import { ReviewsList } from "@/components/city/ReviewsList";
 import { ReviewForm } from "@/components/city/ReviewForm";
 import { DownloadReportButton } from "@/components/city/DownloadReportButton";
@@ -83,11 +85,61 @@ async function getCity(slug: string) {
 	});
 }
 
+function haversineMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
+	const R = 3958.8;
+	const dLat = ((lat2 - lat1) * Math.PI) / 180;
+	const dLng = ((lng2 - lng1) * Math.PI) / 180;
+	const a =
+		Math.sin(dLat / 2) ** 2 +
+		Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+	return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+async function getNearbySuburbs(
+	cityId: string,
+	lat: number,
+	lng: number,
+	stateId: string,
+): Promise<NearbySuburb[]> {
+	const candidates = await db.query.cities.findMany({
+		where: (c, { and, eq, ne, inArray }) =>
+			and(
+				eq(c.stateId, stateId),
+				ne(c.id, cityId),
+				inArray(c.tier, ["mid-size", "small-city", "town"]),
+			),
+		with: { filterScores: true },
+		columns: {
+			id: true, name: true, slug: true, stateId: true,
+			lat: true, lng: true, population: true, overallScore: true,
+			tier: true, heroImageUrl: true,
+		},
+	});
+
+	return candidates
+		.filter((c) => c.lat != null && c.lng != null)
+		.map((c) => ({
+			...c,
+			distMiles: Math.round(haversineMiles(lat, lng, c.lat!, c.lng!)),
+			filterScores: c.filterScores
+				? (c.filterScores as unknown as Record<string, number | null>)
+				: null,
+		}))
+		.filter((c) => c.distMiles <= 30)
+		.sort((a, b) => a.distMiles - b.distMiles)
+		.slice(0, 8);
+}
+
 export default async function CityPage({ params }: Props) {
 	const { slug } = await params;
 	const city = await getCity(slug);
 
 	if (!city) notFound();
+
+	const suburbs =
+		city.tier === "major-city" && city.lat != null && city.lng != null
+			? await getNearbySuburbs(city.id, city.lat, city.lng, city.stateId)
+			: [];
 
 	const h = city.housing;
 	const j = city.jobs;
@@ -391,6 +443,11 @@ export default async function CityPage({ params }: Props) {
 
 				{/* Neighborhoods */}
 				<NeighborhoodCards neighborhoods={city.neighborhoods ?? []} cityName={city.name} />
+
+				{/* Nearby Suburbs — major cities only */}
+				{suburbs.length > 0 && (
+					<NearbySuburbs suburbs={suburbs} majorCityName={city.name} />
+				)}
 
 				{/* Resident Reviews */}
 				<div className="glass rounded-2xl p-6 space-y-6">
