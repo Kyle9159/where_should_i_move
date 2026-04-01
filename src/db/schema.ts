@@ -455,6 +455,19 @@ export const savedComparisons = sqliteTable("saved_comparisons", {
 	...timestamps,
 });
 
+export const movePlans = sqliteTable("move_plans", {
+	id: text("id").primaryKey(),
+	userId: text("user_id")
+		.notNull()
+		.references(() => users.id),
+	token: text("token").notNull().unique(), // public URL slug (16-char hex)
+	title: text("title"),
+	cityIds: text("city_ids").notNull(), // JSON array of city IDs (order preserved)
+	quizWeightsEncoded: text("quiz_weights_encoded"), // base64url encoded weights
+	isPublic: integer("is_public", { mode: "boolean" }).notNull().default(true),
+	...timestamps,
+});
+
 export const cityReviews = sqliteTable("city_reviews", {
 	id: text("id").primaryKey(),
 	cityId: text("city_id")
@@ -612,6 +625,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 	savedCities: many(savedCities),
 	savedSearches: many(savedSearches),
 	savedComparisons: many(savedComparisons),
+	movePlans: many(movePlans),
 }));
 
 export const savedSearchesRelations = relations(savedSearches, ({ one }) => ({
@@ -620,6 +634,10 @@ export const savedSearchesRelations = relations(savedSearches, ({ one }) => ({
 
 export const savedComparisonsRelations = relations(savedComparisons, ({ one }) => ({
 	user: one(users, { fields: [savedComparisons.userId], references: [users.id] }),
+}));
+
+export const movePlansRelations = relations(movePlans, ({ one }) => ({
+	user: one(users, { fields: [movePlans.userId], references: [users.id] }),
 }));
 
 // ---------------------------------------------------------------------------

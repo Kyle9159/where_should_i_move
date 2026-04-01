@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useEffect, useState, Suspense } from "react";
 import {
 	Heart, Trash2, LogOut, ArrowRight, Sparkles, CreditCard,
-	Check, Search, GitCompare, Trophy, MailWarning, X,
+	Check, Search, GitCompare, Trophy, MailWarning, X, Share2, Copy, ExternalLink,
 } from "lucide-react";
 import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
 import { UpgradeButton } from "@/components/shared/UpgradeButton";
@@ -26,6 +26,9 @@ interface SavedSearch {
 interface SavedComparison {
 	id: string; name: string | null; cityIds: string; createdAt: string | null;
 }
+interface PlanData {
+	token: string; url: string; title: string | null; cityCount: number;
+}
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
@@ -36,6 +39,7 @@ function DashboardContent() {
 	const queryClient = useQueryClient();
 	const [billingLoading, setBillingLoading] = useState(false);
 	const [verifyDismissed, setVerifyDismissed] = useState(false);
+	const [planCopied, setPlanCopied] = useState(false);
 
 	const justUpgraded = searchParams.get("upgraded") === "1";
 	const justVerified = searchParams.get("verified") === "1";
@@ -88,6 +92,24 @@ function DashboardContent() {
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["saved-comparisons"] }),
 	});
 
+	const { data: planData, refetch: refetchPlan } = useQuery<{ plan: PlanData | null }>({
+		queryKey: ["move-plan"],
+		queryFn: () => fetch("/api/users/me/plan").then((r) => r.ok ? r.json() : { plan: null }),
+		enabled: status === "authenticated" && isPremium,
+	});
+
+	const generatePlanMutation = useMutation({
+		mutationFn: () => {
+			const quizWeightsEncoded = typeof window !== "undefined" ? localStorage.getItem("quiz_weights") ?? undefined : undefined;
+			return fetch("/api/users/me/plan", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ quizWeightsEncoded }),
+			}).then((r) => r.json());
+		},
+		onSuccess: () => refetchPlan(),
+	});
+
 	async function handleManageBilling() {
 		setBillingLoading(true);
 		try {
@@ -122,6 +144,13 @@ function DashboardContent() {
 		} catch {
 			router.push("/compare");
 		}
+	}
+
+	function copyPlanUrl(url: string) {
+		navigator.clipboard.writeText(url).then(() => {
+			setPlanCopied(true);
+			setTimeout(() => setPlanCopied(false), 2500);
+		});
 	}
 
 	if (status === "loading" || status === "unauthenticated") {
@@ -297,6 +326,73 @@ function DashboardContent() {
 							</div>
 						</div>
 						<UpgradeButton label="Upgrade →" className="shrink-0 px-4 py-2 text-xs" />
+					</div>
+				)}
+
+				{/* Share Move Plan */}
+				{isPremium && (
+					<div className="glass rounded-2xl p-6">
+						<div className="flex items-center gap-2 mb-4">
+							<Share2 size={16} style={{ color: "var(--color-accent)" }} />
+							<h2 className="font-bold">Share My Move Plan</h2>
+						</div>
+						{planData?.plan ? (
+							<div className="space-y-3">
+								<p className="text-sm" style={{ color: "var(--color-muted)" }}>
+									Your plan includes {planData.plan.cityCount} {planData.plan.cityCount === 1 ? "city" : "cities"}. Share this link with friends, family, or your partner.
+								</p>
+								<div className="flex items-center gap-2">
+									<code
+										className="flex-1 min-w-0 text-xs px-3 py-2 rounded-xl truncate"
+										style={{ background: "oklch(14% 0.03 220)", border: "1px solid var(--color-border)", color: "var(--color-muted)" }}
+									>
+										{planData.plan.url}
+									</code>
+									<button
+										type="button"
+										onClick={() => copyPlanUrl(planData.plan!.url)}
+										className="shrink-0 flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-medium transition-all"
+										style={{ background: planCopied ? "oklch(40% 0.15 150)" : "var(--color-accent)", color: "#000" }}
+									>
+										{planCopied ? <><Check size={12} /> Copied!</> : <><Copy size={12} /> Copy</>}
+									</button>
+									<a
+										href={planData.plan.url}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="shrink-0 p-2 rounded-xl border transition-colors hover:border-[var(--color-accent)]"
+										style={{ borderColor: "var(--color-border)", color: "var(--color-muted)" }}
+									>
+										<ExternalLink size={14} />
+									</a>
+								</div>
+								<button
+									type="button"
+									onClick={() => generatePlanMutation.mutate()}
+									disabled={generatePlanMutation.isPending}
+									className="text-xs transition-colors disabled:opacity-50"
+									style={{ color: "var(--color-muted)" }}
+								>
+									{generatePlanMutation.isPending ? "Updating…" : "↻ Update with latest saved cities"}
+								</button>
+							</div>
+						) : (
+							<div className="space-y-3">
+								<p className="text-sm" style={{ color: "var(--color-muted)" }}>
+									Generate a shareable link to your saved cities list. Send it to friends or family to show where you&rsquo;re considering moving.
+								</p>
+								<button
+									type="button"
+									onClick={() => generatePlanMutation.mutate()}
+									disabled={generatePlanMutation.isPending || savedCities.length === 0}
+									className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:brightness-110 disabled:opacity-50"
+									style={{ background: "var(--color-accent)", color: "#000" }}
+								>
+									<Share2 size={14} />
+									{generatePlanMutation.isPending ? "Generating…" : savedCities.length === 0 ? "Save cities first" : "Generate Share Link"}
+								</button>
+							</div>
+						)}
 					</div>
 				)}
 
