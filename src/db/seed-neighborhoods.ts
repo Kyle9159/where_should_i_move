@@ -1,14 +1,18 @@
 /**
- * Generates top 5 neighborhoods for the top 300 cities using xAI (Grok).
- * Neighborhoods include name, description, approximate lat/lng, vibe tags,
- * and rough housing price data.
+ * Generates neighborhoods for cities using xAI (Grok), tiered by population.
+ *
+ * Population tiers:
+ *   > 250 000  → 5 neighborhoods
+ *   150–250 k   → 3 neighborhoods
+ *   < 150 000  → 2 neighborhoods
  *
  * Run: npm run db:seed:neighborhoods
  *
  * Options:
- *   LIMIT=N       — process only first N cities (default: 300)
+ *   LIMIT=N       — process only first N cities (default: 2708)
  *   DRY_RUN=1     — print output without writing to DB
  *   REPLACE=1     — replace existing neighborhoods (default: skip cities with data)
+ *   MIN_POP=N     — skip cities with population below N (default: 0)
  */
 
 import { config } from "dotenv";
@@ -21,7 +25,8 @@ import { createId } from "@paralleldrive/cuid2";
 
 const DRY_RUN = process.env.DRY_RUN === "1";
 const REPLACE = process.env.REPLACE === "1";
-const LIMIT = parseInt(process.env.LIMIT ?? "300", 10);
+const LIMIT = parseInt(process.env.LIMIT ?? "2708", 10);
+const MIN_POP = parseInt(process.env.MIN_POP ?? "0", 10);
 
 const apiKey = process.env.XAI_API_KEY;
 if (!apiKey) {
@@ -57,13 +62,26 @@ const VALID_BEST_FOR = new Set([
 	"remote workers", "nightlife seekers", "outdoor enthusiasts",
 ]);
 
+function neighborhoodCount(population: number | null): number {
+	const pop = population ?? 0;
+	if (pop > 250_000) return 5;
+	if (pop > 150_000) return 3;
+	return 2;
+}
+
 async function generateNeighborhoods(
 	cityName: string,
 	stateId: string,
 	cityLat: number,
 	cityLng: number,
+	count: number,
+	hintNames?: string[], // OSM-sourced real names
 ): Promise<NeighborhoodRow[]> {
-	const prompt = `List the 5 most well-known and distinct neighborhoods in ${cityName}, ${stateId}.
+	const nameHint = hintNames && hintNames.length >= 2
+		? `\n\nIMPORTANT: Prioritise these real neighborhood names (from OpenStreetMap): ${hintNames.slice(0, count).join(", ")}. Use them as-is; only invent names if you need to reach ${count} total.`
+		: "";
+
+	const prompt = `List the ${count} most well-known and distinct neighborhoods in ${cityName}, ${stateId}.${nameHint}
 
 For each neighborhood return a JSON object with these exact fields:
 - name: neighborhood name (string)
@@ -78,17 +96,15 @@ For each neighborhood return a JSON object with these exact fields:
 - medianHomePrice: approximate median home price in USD as integer
 - walkScore: estimated Walk Score 0-100 as integer
 
-Return ONLY a valid JSON array of 5 objects, no markdown, no explanation.`;
+Return ONLY a valid JSON array of ${count} objects, no markdown, no explanation.`;
 
 	const msg = await client.chat.completions.create({
 		model: "grok-3-mini",
-		max_tokens: 1024,
+		max_tokens: count <= 2 ? 600 : count <= 3 ? 800 : 1200,
 		messages: [{ role: "user", content: prompt }],
 	});
 
 	const text = (msg.choices[0].message.content ?? "").trim();
-
-	// Strip markdown code fences if present
 	const json = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
 	const raw = JSON.parse(json) as NeighborhoodRow[];
 
@@ -110,29 +126,48 @@ Return ONLY a valid JSON array of 5 objects, no markdown, no explanation.`;
 }
 
 async function main() {
-	// Top N cities by overall_score with major-city or mid-size tier
 	const cities = sqlite.prepare(`
-		SELECT id, name, state_id, lat, lng, overall_score
+		SELECT id, name, state_id, lat, lng, overall_score, population
 		FROM cities
 		WHERE lat IS NOT NULL AND lng IS NOT NULL
-		  AND tier IN ('major-city', 'mid-size')
+		  AND (population IS NULL OR population >= ?)
 		ORDER BY overall_score DESC
 		LIMIT ?
-	`).all(LIMIT) as Array<{
+	`).all(MIN_POP, LIMIT) as Array<{
 		id: string; name: string; state_id: string;
-		lat: number; lng: number; overall_score: number;
+		lat: number; lng: number; overall_score: number; population: number | null;
 	}>;
 
 	console.log(`🏘️  Generating neighborhoods for ${cities.length} cities`);
+	console.log(`   Tiers: >250k → 5 hoods | 150-250k → 3 hoods | <150k → 2 hoods`);
 	if (DRY_RUN) console.log("   DRY RUN — no writes");
 
 	const hasNeighborhoods = sqlite.prepare(
 		"SELECT COUNT(*) as n FROM neighborhoods WHERE city_id = ?"
 	);
 
+	// Check for OSM hint names written by enrich-neighborhoods-osm.ts
+	const getOsmHints = (() => {
+		const tableExists = sqlite.prepare(
+			"SELECT name FROM sqlite_master WHERE type='table' AND name='neighborhood_hints'"
+		).get() != null;
+		if (!tableExists) return (_cityId: string): string[] => [];
+		return (cityId: string): string[] => {
+			const row = sqlite.prepare(
+				"SELECT names FROM neighborhood_hints WHERE city_id = ?"
+			).get(cityId) as { names: string } | undefined;
+			if (!row?.names) return [];
+			try { return JSON.parse(row.names) as string[]; } catch { return []; }
+		};
+	})();
+
 	let done = 0; let skipped = 0; let failed = 0;
+	const tierCounts: Record<string, number> = { "5 hoods": 0, "3 hoods": 0, "2 hoods": 0 };
 
 	for (const city of cities) {
+		const count = neighborhoodCount(city.population);
+		const tierKey = `${count} hoods` as keyof typeof tierCounts;
+
 		const existing = (hasNeighborhoods.get(city.id) as { n: number }).n;
 		if (existing > 0 && !REPLACE) {
 			skipped++;
@@ -140,21 +175,22 @@ async function main() {
 		}
 
 		process.stdout.write(
-			`\r  [${done + skipped + failed + 1}/${cities.length}] ${city.name}, ${city.state_id}...    `
+			`\r  [${done + skipped + failed + 1}/${cities.length}] ${city.name}, ${city.state_id} (${count} hoods, pop ${(city.population ?? 0).toLocaleString()})...    `
 		);
 
 		try {
+			const osmHints = getOsmHints(city.id);
 			const hoods = await generateNeighborhoods(
-				city.name, city.state_id, city.lat, city.lng,
+				city.name, city.state_id, city.lat, city.lng, count, osmHints.length >= 2 ? osmHints : undefined,
 			);
 
 			if (DRY_RUN) {
 				console.log(`\n  ${city.name}: ${hoods.map((h) => h.name).join(", ")}`);
 				done++;
+				tierCounts[tierKey] = (tierCounts[tierKey] ?? 0) + 1;
 				continue;
 			}
 
-			// Clear existing if replacing
 			if (REPLACE) {
 				sqlite.prepare("DELETE FROM neighborhoods WHERE city_id = ?").run(city.id);
 			}
@@ -182,17 +218,18 @@ async function main() {
 			});
 			insertMany(hoods);
 			done++;
+			tierCounts[tierKey] = (tierCounts[tierKey] ?? 0) + 1;
 		} catch (err) {
 			console.error(`\n  ❌ ${city.name}: ${(err as Error).message}`);
 			failed++;
 		}
 
-		// Small delay to be polite to the API
 		await new Promise((r) => setTimeout(r, 200));
 	}
 
 	process.stdout.write("\n");
 	console.log(`\n✅ Done: ${done} cities seeded, ${skipped} skipped, ${failed} failed`);
+	console.log(`   Tier breakdown: ${JSON.stringify(tierCounts)}`);
 	console.log(`   Total neighborhoods: ${(sqlite.prepare("SELECT COUNT(*) as n FROM neighborhoods").get() as { n: number }).n}`);
 }
 

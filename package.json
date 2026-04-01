@@ -32,6 +32,7 @@
     "db:normalize": "npx tsx src/db/normalize-batch.ts",
     "db:normalize:all": "ALL=1 npx tsx src/db/normalize-batch.ts",
     "db:seed:neighborhoods": "npx tsx src/db/seed-neighborhoods.ts",
+    "db:enrich:neighborhoods:osm": "npx tsx src/db/enrich-neighborhoods-osm.ts",
     "db:seed:states": "npx tsx src/db/seed-states.ts",
     "db:seed:photos:priority": "npx tsx src/db/seed-photos-priority.ts"
   },
