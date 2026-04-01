@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useEffect, useState, Suspense } from "react";
 import {
 	Heart, Trash2, LogOut, ArrowRight, Sparkles, CreditCard,
-	Check, Search, GitCompare, Trophy, MailWarning, X, Share2, Copy, ExternalLink,
+	Check, Search, GitCompare, Trophy, MailWarning, X, Share2, Copy, ExternalLink, Bell, BellOff,
 } from "lucide-react";
 import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
 import { UpgradeButton } from "@/components/shared/UpgradeButton";
@@ -21,7 +21,7 @@ interface SavedCity {
 	city: { id: string; slug: string; name: string; stateId: string; overallScore: number | null; heroImageUrl: string | null; thumbnailUrl: string | null; tier: string };
 }
 interface SavedSearch {
-	id: string; name: string | null; filterState: string; resultCount: number | null; lastRunAt: string | null; createdAt: string | null;
+	id: string; name: string | null; filterState: string; resultCount: number | null; lastRunAt: string | null; createdAt: string | null; alertEnabled: boolean | null;
 }
 interface SavedComparison {
 	id: string; name: string | null; cityIds: string; createdAt: string | null;
@@ -81,6 +81,15 @@ function DashboardContent() {
 			method: "DELETE", headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ id }),
 		}),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["saved-searches"] }),
+	});
+
+	const toggleAlertMutation = useMutation({
+		mutationFn: ({ id, alertEnabled }: { id: string; alertEnabled: boolean }) =>
+			fetch("/api/users/me/searches", {
+				method: "PATCH", headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ id, alertEnabled }),
+			}),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["saved-searches"] }),
 	});
 
@@ -457,6 +466,7 @@ function DashboardContent() {
 										<p className="text-xs" style={{ color: "var(--color-muted)" }}>
 											{s.resultCount != null ? `${s.resultCount} results · ` : ""}
 											{s.lastRunAt ? new Date(s.lastRunAt).toLocaleDateString() : ""}
+											{s.alertEnabled && <span className="ml-1" style={{ color: "var(--color-accent)" }}>· alerts on</span>}
 										</p>
 									</div>
 									<div className="flex items-center gap-2 shrink-0">
@@ -464,6 +474,18 @@ function DashboardContent() {
 											className="text-xs px-3 py-1.5 rounded-lg font-medium"
 											style={{ background: "oklch(18% 0.04 220)", color: "var(--color-accent)", border: "1px solid var(--color-accent)" }}>
 											Load
+										</button>
+										<button
+											type="button"
+											title={s.alertEnabled ? "Disable weekly alert" : "Enable weekly email alert"}
+											onClick={() => toggleAlertMutation.mutate({ id: s.id, alertEnabled: !s.alertEnabled })}
+											className="p-1.5 rounded-lg border transition-colors"
+											style={{
+												borderColor: s.alertEnabled ? "var(--color-accent)" : "var(--color-border)",
+												color: s.alertEnabled ? "var(--color-accent)" : "var(--color-muted)",
+											}}
+										>
+											{s.alertEnabled ? <Bell size={13} /> : <BellOff size={13} />}
 										</button>
 										<button type="button" onClick={() => deleteSearchMutation.mutate(s.id)}
 											className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"

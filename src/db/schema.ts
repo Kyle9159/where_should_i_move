@@ -442,6 +442,8 @@ export const savedSearches = sqliteTable("saved_searches", {
 	filterState: text("filter_state").notNull(), // JSON
 	resultCount: integer("result_count"),
 	lastRunAt: text("last_run_at"),
+	alertEnabled: integer("alert_enabled", { mode: "boolean" }).notNull().default(false),
+	alertLastSentAt: text("alert_last_sent_at"),
 	...timestamps,
 });
 

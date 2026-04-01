@@ -126,3 +126,51 @@ export async function sendReviewApprovedEmail(to: string, cityName: string, city
 		`),
 	});
 }
+
+// Weekly search alert
+export async function sendWeeklyAlertEmail(
+	to: string,
+	name: string,
+	searchName: string,
+	cities: Array<{ name: string; stateId: string; slug: string; score: number }>,
+	exploreUrl: string,
+	dashboardUrl: string,
+) {
+	const cityRows = cities
+		.map(
+			(c, i) => `
+		<tr>
+			<td style="padding:10px 8px;border-bottom:1px solid #1e1e1e;color:#aaa;text-align:center;width:32px">${i + 1}</td>
+			<td style="padding:10px 8px;border-bottom:1px solid #1e1e1e">
+				<a href="${APP_URL}/city/${c.slug}" style="color:#e0e0e0;text-decoration:none;font-weight:600">${c.name}</a>
+				<span style="color:#666;font-size:13px">, ${c.stateId}</span>
+			</td>
+			<td style="padding:10px 8px;border-bottom:1px solid #1e1e1e;text-align:right">
+				<span style="color:${c.score >= 70 ? "#00d4ff" : c.score >= 50 ? "#f59e0b" : "#f87171"};font-weight:700">${c.score}</span>
+			</td>
+		</tr>`,
+		)
+		.join("");
+
+	await send({
+		to,
+		subject: `Your weekly city matches are ready — "${searchName}"`,
+		html: baseHtml(`
+			<h1>Your weekly city matches</h1>
+			<p>Hi ${name ?? "there"}, here are the top cities matching your saved search <strong>"${searchName}"</strong>:</p>
+			<table style="width:100%;border-collapse:collapse;margin:16px 0">
+				<thead>
+					<tr>
+						<th style="text-align:center;padding:8px;border-bottom:1px solid #333;color:#555;font-size:12px">#</th>
+						<th style="text-align:left;padding:8px;border-bottom:1px solid #333;color:#555;font-size:12px">City</th>
+						<th style="text-align:right;padding:8px;border-bottom:1px solid #333;color:#555;font-size:12px">Score</th>
+					</tr>
+				</thead>
+				<tbody>${cityRows}</tbody>
+			</table>
+			<a class="btn" href="${exploreUrl}">See all matches</a>
+			<hr class="divider">
+			<p style="font-size:13px">To stop receiving these alerts, <a href="${dashboardUrl}" style="color:#00d4ff">manage your saved searches</a> in your dashboard.</p>
+		`),
+	});
+}

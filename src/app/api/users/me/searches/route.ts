@@ -62,3 +62,19 @@ export async function DELETE(req: NextRequest) {
 	await (db as any).delete(savedSearches).where(eq(savedSearches.id, id));
 	return NextResponse.json({ ok: true });
 }
+
+export async function PATCH(req: NextRequest) {
+	const session = await getServerSession(authOptions);
+	if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+	const { id, alertEnabled } = (await req.json()) as { id: string; alertEnabled: boolean };
+	if (!id || alertEnabled === undefined) return NextResponse.json({ error: "id and alertEnabled required" }, { status: 400 });
+
+	const search = await db.query.savedSearches.findFirst({
+		where: (s, { and, eq }) => and(eq(s.id, id), eq(s.userId, session.user!.id!)),
+	});
+	if (!search) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+	await (db as any).update(savedSearches).set({ alertEnabled }).where(eq(savedSearches.id, id));
+	return NextResponse.json({ ok: true });
+}
