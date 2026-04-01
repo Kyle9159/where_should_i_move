@@ -43,6 +43,9 @@ export default async function LandingPage() {
 					<Link href="/map" className="text-sm transition-colors hover:text-white hidden sm:inline" style={{ color: "var(--color-muted)" }}>
 						Map
 					</Link>
+					<Link href="/best" className="text-sm transition-colors hover:text-white hidden sm:inline" style={{ color: "var(--color-muted)" }}>
+						Best Cities
+					</Link>
 					<Link href="/surprise" className="text-sm transition-colors hover:text-white hidden sm:inline" style={{ color: "var(--color-muted)" }}>
 						Surprise Me
 					</Link>

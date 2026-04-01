@@ -27,6 +27,7 @@
     "db:enrich:walkability": "npx tsx src/db/enrich-walkability-osm.ts",
     "db:enrich:airnow": "npx tsx src/db/enrich-airnow.ts",
     "db:enrich:lifestyle": "npx tsx src/db/enrich-lifestyle.ts",
+    "db:enrich:lifestyle2": "npx tsx src/db/enrich-lifestyle-osm2.ts",
     "db:enrich:demographics": "npx tsx src/db/enrich-demographics.ts",
     "db:normalize": "npx tsx src/db/normalize-batch.ts",
     "db:normalize:all": "ALL=1 npx tsx src/db/normalize-batch.ts",

@@ -1,5 +1,6 @@
 import { type NextAuthOptions, type Session, type User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { db } from "@/db";
@@ -72,11 +73,9 @@ export const authOptions: NextAuthOptions = {
 				return { id: existing.id, email: existing.email!, name: existing.name, tier: existing.tier } as User & { tier: string };
 			},
 		}),
-		// Uncomment to enable Google OAuth:
-		// GoogleProvider({
-		//   clientId: process.env.GOOGLE_CLIENT_ID!,
-		//   clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-		// }),
+		...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+			? [GoogleProvider({ clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET })]
+			: []),
 	],
 	callbacks: {
 		async jwt({ token, user }) {

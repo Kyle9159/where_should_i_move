@@ -25,13 +25,13 @@ export const metadata: Metadata = {
 		template: "%s | Where Should I Move",
 	},
 	description:
-		"Intelligent US relocation research. Compare 55+ filters, AI-powered quiz, and ranked city results across 1,000 US cities. Find your perfect new home.",
+		"Intelligent US relocation research. Compare 55+ filters, AI-powered quiz, and ranked city results across 2,700+ US cities. Find your perfect new home.",
 	keywords: ["relocation", "moving", "best cities to live", "cost of living", "city comparison", "where to move"],
 	openGraph: {
 		type: "website",
 		siteName: "Where Should I Move",
 		title: "Where Should I Move — Find Your Next Home",
-		description: "AI-powered US city comparison. 55+ filters, 1,000 cities, personalized rankings.",
+		description: "AI-powered US city comparison. 55+ filters, 2,700+ cities, personalized rankings.",
 	},
 	twitter: { card: "summary_large_image" },
 	manifest: "/manifest.webmanifest",

@@ -1,0 +1,178 @@
+import type { FilterWeights } from "@/lib/ranking";
+
+export interface Persona {
+  slug: string;
+  emoji: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  personalitySummary: string; // shown on results page
+  weights: FilterWeights;
+}
+
+export const PERSONAS: Persona[] = [
+  {
+    slug: "remote-work",
+    emoji: "💻",
+    title: "Remote Workers",
+    subtitle: "Best cities to work from anywhere",
+    description: "Affordable cities with fast internet, walkable neighborhoods, great food scenes, and a thriving work-from-home culture.",
+    personalitySummary: "You value flexibility, connection, and a place that fuels creativity — not just cheap rent.",
+    weights: {
+      scoreBroadband: 0.15,
+      scoreWalkability: 0.12,
+      scoreCostOfLiving: 0.12,
+      scoreRestaurants: 0.10,
+      scoreArtsAndCulture: 0.08,
+      scoreMedianRent: 0.10,
+      scoreTechHub: 0.08,
+      scoreDiversity: 0.07,
+      scoreNightlife: 0.06,
+      scoreCollegeEducated: 0.06,
+      scoreAirQuality: 0.06,
+    },
+  },
+  {
+    slug: "retirees",
+    emoji: "🌴",
+    title: "Retirees",
+    subtitle: "Best cities to enjoy your next chapter",
+    description: "Low taxes, warm weather, quality healthcare, and affordable living — the perfect combination for a comfortable retirement.",
+    personalitySummary: "You've earned the good life. You want sunshine, safety, and zero state income tax.",
+    weights: {
+      scoreHealthcare: 0.18,
+      scoreCostOfLiving: 0.14,
+      scoreTaxBurden: 0.12,
+      scoreViolentCrime: 0.12,
+      scoreWarmClimate: 0.10,
+      scorePropertyCrime: 0.08,
+      scoreWalkability: 0.07,
+      scoreAirQuality: 0.07,
+      scoreMedianHomePrice: 0.06,
+      scoreNaturalDisasterRisk: 0.06,
+    },
+  },
+  {
+    slug: "outdoors",
+    emoji: "🏔️",
+    title: "Outdoor Adventurers",
+    subtitle: "Best cities for nature lovers",
+    description: "Trailheads at your doorstep, national parks nearby, clean air, and mountains or coast within reach.",
+    personalitySummary: "Your idea of a perfect weekend involves hiking boots, not brunch reservations.",
+    weights: {
+      scoreTrails: 0.18,
+      scoreNearMountains: 0.14,
+      scoreNationalPark: 0.14,
+      scoreAirQuality: 0.12,
+      scoreGreenSpace: 0.10,
+      scoreNearOcean: 0.08,
+      scoreNearLake: 0.08,
+      scoreNaturalDisasterRisk: 0.06,
+      scoreBikeability: 0.06,
+      scoreWalkability: 0.04,
+    },
+  },
+  {
+    slug: "young-professionals",
+    emoji: "🚀",
+    title: "Young Professionals",
+    subtitle: "Best cities to launch your career",
+    description: "Thriving job markets, vibrant nightlife, diverse communities, walkable neighborhoods, and career growth.",
+    personalitySummary: "You're building something — a career, a network, a life — and you need a city that keeps up.",
+    weights: {
+      scoreTechHub: 0.14,
+      scoreJobMarket: 0.12,
+      scoreNightlife: 0.10,
+      scoreRestaurants: 0.10,
+      scoreWalkability: 0.10,
+      scoreTransit: 0.08,
+      scoreDiversity: 0.08,
+      scoreIncomeGrowth: 0.08,
+      scoreArtsAndCulture: 0.08,
+      scoreCollegeEducated: 0.06,
+      scoreMedianIncome: 0.06,
+    },
+  },
+  {
+    slug: "families",
+    emoji: "👨‍👩‍👧",
+    title: "Families",
+    subtitle: "Best cities to raise a family",
+    description: "Top-rated schools, safe neighborhoods, affordable homes, childcare, and room to grow.",
+    personalitySummary: "Everything you do is for them. You need great schools, safe streets, and a backyard.",
+    weights: {
+      scoreSchoolQuality: 0.18,
+      scoreViolentCrime: 0.15,
+      scorePropertyCrime: 0.10,
+      scoreMedianHomePrice: 0.12,
+      scoreGraduationRate: 0.08,
+      scoreChildcare: 0.08,
+      scorePupilSpending: 0.07,
+      scoreAffordabilityIndex: 0.07,
+      scoreGreenSpace: 0.06,
+      scoreAirQuality: 0.05,
+      scoreNaturalDisasterRisk: 0.04,
+    },
+  },
+  {
+    slug: "budget",
+    emoji: "💰",
+    title: "Budget Movers",
+    subtitle: "Best cities for affordable living",
+    description: "Low cost of living, cheap rent, no-income-tax states, and strong job markets — stretch your dollar further.",
+    personalitySummary: "You want a high quality of life without the high price tag. Smart move.",
+    weights: {
+      scoreCostOfLiving: 0.20,
+      scoreMedianRent: 0.18,
+      scoreTaxBurden: 0.15,
+      scoreMedianHomePrice: 0.15,
+      scoreAffordabilityIndex: 0.10,
+      scoreJobMarket: 0.08,
+      scoreUnemployment: 0.07,
+      scoreViolentCrime: 0.07,
+    },
+  },
+  {
+    slug: "beach-life",
+    emoji: "🏖️",
+    title: "Beach Life",
+    subtitle: "Best cities near the coast",
+    description: "Ocean access, warm weather, sunshine, and a relaxed pace — because life is better with sand between your toes.",
+    personalitySummary: "You don't just want to visit the beach. You want to live near it year-round.",
+    weights: {
+      scoreNearOcean: 0.25,
+      scoreWarmClimate: 0.18,
+      scoreSunnyDays: 0.12,
+      scoreAirQuality: 0.08,
+      scoreRestaurants: 0.08,
+      scoreNaturalDisasterRisk: 0.08,
+      scoreWalkability: 0.07,
+      scoreCostOfLiving: 0.07,
+      scoreViolentCrime: 0.07,
+    },
+  },
+  {
+    slug: "college-towns",
+    emoji: "🎓",
+    title: "College Towns",
+    subtitle: "Best cities with a college vibe",
+    description: "Lively arts scenes, diverse populations, walkable neighborhoods, and the energy of a university town.",
+    personalitySummary: "You love a city with brains, bars, and bookstores all within walking distance.",
+    weights: {
+      scoreCollegeTown: 0.20,
+      scoreArtsAndCulture: 0.12,
+      scoreWalkability: 0.10,
+      scoreDiversity: 0.10,
+      scoreNightlife: 0.08,
+      scoreRestaurants: 0.08,
+      scoreGraduationRate: 0.08,
+      scoreCollegeEducated: 0.08,
+      scoreBikeability: 0.08,
+      scoreMedAge: 0.08,
+    },
+  },
+];
+
+export function getPersona(slug: string): Persona | undefined {
+  return PERSONAS.find((p) => p.slug === slug);
+}
