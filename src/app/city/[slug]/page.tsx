@@ -137,7 +137,7 @@ export default async function CityPage({ params }: Props) {
 	if (!city) notFound();
 
 	const suburbs =
-		city.tier === "major-city" && city.lat != null && city.lng != null
+		(city.tier === "major-city" || (city.population ?? 0) > 150_000) && city.lat != null && city.lng != null
 			? await getNearbySuburbs(city.id, city.lat, city.lng, city.stateId)
 			: [];
 
