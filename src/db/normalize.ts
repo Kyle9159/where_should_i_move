@@ -60,9 +60,14 @@ export async function computeAllScores(db: DB, cityIds?: string[]): Promise<numb
 		const l = city.lifestyle;
 		const st = city.state;
 
-		// Arts & Culture: venue count if available, else population-based proxy
+		// Detect OSM data gap: all three fields came back 0 in a small/remote town
+		// (OSM coverage is sparse for towns < 50k — treat as missing rather than true zero)
+		const osmAllZero = l?.artMuseumCount === 0 && (l?.trailsMilesNearby ?? 0) === 0 && (l?.parksAcresPerCapita ?? 0) === 0;
+		const likelyNoOsmData = osmAllZero && (city.population ?? 0) < 50_000;
+
+		// Arts & Culture: venue count if OSM has data, else population-based proxy
 		const artsVenues = (l?.artMuseumCount ?? 0) + (l?.theaterCount ?? 0);
-		const artsScore = (l?.artMuseumCount != null || l?.theaterCount != null)
+		const artsScore = (l?.artMuseumCount != null && !likelyNoOsmData)
 			? minMaxNorm(artsVenues, 0, 15)
 			: minMaxNorm(city.population, 30_000, 2_500_000);
 
@@ -166,9 +171,9 @@ export async function computeAllScores(db: DB, cityIds?: string[]): Promise<numb
 			scoreNearOcean: boolScore(l?.nearOcean),
 			scoreNearMountains: boolScore(l?.nearMountains),
 			scoreNearLake: boolScore(l?.nearLake),
-			scoreTrails: l?.trailsMilesNearby != null ? minMaxNorm(l.trailsMilesNearby, 0, 100) : 50,
+			scoreTrails: (l?.trailsMilesNearby != null && !likelyNoOsmData) ? minMaxNorm(l.trailsMilesNearby, 0, 100) : 50,
 			scoreNationalPark: nationalParkScore,
-			scoreGreenSpace: l?.parksAcresPerCapita != null ? minMaxNorm(l.parksAcresPerCapita, 0, 5) : 50,
+			scoreGreenSpace: (l?.parksAcresPerCapita != null && !likelyNoOsmData) ? minMaxNorm(l.parksAcresPerCapita, 0, 5) : 50,
 			scoreLowHumidity: invertNorm(c?.humidityAvg, 20, 90),
 		};
 

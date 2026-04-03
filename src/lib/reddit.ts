@@ -80,11 +80,30 @@ async function searchReddit(query: string): Promise<RedditPost[]> {
 	}
 }
 
+/** Fetches top posts from the city's own subreddit (e.g. r/Austin, r/Denver). */
+async function fetchCitySubredditPosts(cityName: string): Promise<RedditPost[]> {
+	// Most city subreddits drop spaces: "Los Angeles" → r/LosAngeles
+	const slug = cityName.replace(/\s+/g, "");
+	try {
+		const url = `https://www.reddit.com/r/${slug}/search.json?q=living+moving+worth+it+pros+cons&sort=relevance&t=all&limit=25&restrict_sr=1`;
+		const res = await fetch(url, {
+			headers: { "User-Agent": "NextHomeUSA/1.0 (relocation research app)" },
+			signal: AbortSignal.timeout(10000),
+			next: { revalidate: 86400 * 3 },
+		} as RequestInit);
+		if (!res.ok) return []; // 404 = subreddit doesn't exist; silently skip
+		const data = (await res.json()) as RedditListing;
+		return data.data?.children ?? [];
+	} catch {
+		return [];
+	}
+}
+
 export async function getCityRedditSentiment(
 	cityName: string,
 	stateId: string,
 ): Promise<RedditSentiment | null> {
-	// Query the main relocation subreddits
+	// Query 1+2: relocation subreddits (general moving discussions)
 	const queries = [
 		`"${cityName}" site:reddit.com/r/SameGrassGreener OR site:reddit.com/r/moving OR site:reddit.com/r/relocating`,
 		`"${cityName} ${stateId}" moving living`,
@@ -95,9 +114,12 @@ export async function getCityRedditSentiment(
 	for (const q of queries) {
 		const posts = await searchReddit(q);
 		allPosts.push(...posts);
-		// Small delay to be respectful of Reddit's API
 		await new Promise((r) => setTimeout(r, 1000));
 	}
+
+	// Query 3: city's own subreddit (r/Austin, r/Denver, etc.) — richer lived-experience posts
+	const cityPosts = await fetchCitySubredditPosts(cityName);
+	allPosts.push(...cityPosts);
 
 	if (allPosts.length === 0) return null;
 
