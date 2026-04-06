@@ -151,15 +151,26 @@ export async function computeAllScores(db: DB, cityIds?: string[]): Promise<numb
 			// Practical / Safety
 			scoreViolentCrime: invertNorm(s?.violentCrimeRate, 50, 2000),
 			scorePropertyCrime: invertNorm(s?.propertyCrimeRate, 500, 7000),
-			scoreHealthcare: 50,
-			scoreBroadband: 50,
+			// Healthcare proxy: larger cities + higher income → more hospitals & specialists
+			scoreHealthcare: Math.round(
+				minMaxNorm(city.population, 20_000, 1_000_000) * 0.5 +
+				minMaxNorm(j?.medianHouseholdIncome, 35_000, 130_000) * 0.5
+			),
+			// Broadband proxy: urban density (transit score) + city size → better ISP coverage
+			scoreBroadband: Math.round(
+				minMaxNorm(w?.transitScore, 0, 100) * 0.5 +
+				minMaxNorm(city.population, 10_000, 500_000) * 0.5
+			),
 			scorePopulationGrowth: minMaxNorm(city.populationGrowthPct, -2, 8),
 
 			// Family
 			scoreSchoolQuality: minMaxNorm(sc?.greatSchoolsRating, 1, 10),
 			scoreHighSchool: minMaxNorm(sc?.highSchoolRating, 1, 10),
 			scoreGraduationRate: minMaxNorm(sc?.graduationRate, 25, 95),
-			scoreChildcare: 50,
+			scoreChildcare: Math.round(
+				minMaxNorm(j?.medianHouseholdIncome, 35_000, 130_000) * 0.5 +
+				minMaxNorm(d?.pctCollegeEducated, 0.15, 0.80) * 0.5
+			),
 			scorePupilSpending: minMaxNorm(sc?.perPupilSpending, 5_000, 25_000),
 
 			// Nature & Climate

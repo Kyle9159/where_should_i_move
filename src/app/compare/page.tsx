@@ -244,10 +244,77 @@ function CompareInner() {
 						Loading comparison...
 					</div>
 				) : cityData.length >= 2 ? (
-					<CompareTable cities={cityData} />
+					<>
+						<WinnerSummary cities={cityData} />
+						<CompareTable cities={cityData} />
+					</>
 				) : null}
 			</div>
 		</main>
+	);
+}
+
+// ── Winner Summary ─────────────────────────────────────────────────────────────
+
+function WinnerSummary({ cities }: { cities: CityDetail[] }) {
+	// Count how many rows each city wins across all sections
+	const wins: number[] = cities.map(() => 0);
+	const winLabels: string[][] = cities.map(() => []);
+
+	for (const section of SECTIONS) {
+		for (const row of section.rows) {
+			if (row.higherIsBetter === undefined) continue;
+			const values = cities.map((c) => {
+				const v = row.extract(c);
+				return typeof v === "number" ? v : null;
+			});
+			const nums = values.filter((v): v is number => v !== null);
+			if (nums.length < 2) continue;
+			const best = row.higherIsBetter ? Math.max(...nums) : Math.min(...nums);
+			const idx = values.indexOf(best);
+			if (idx >= 0) {
+				wins[idx]++;
+				winLabels[idx].push(row.label);
+			}
+		}
+	}
+
+	const totalRows = wins.reduce((a, b) => a + b, 0);
+	const topIdx = wins.indexOf(Math.max(...wins));
+
+	return (
+		<div className="glass rounded-2xl p-5 mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+			<div className="flex items-center gap-2 shrink-0">
+				<Trophy size={18} style={{ color: "#facc15" }} />
+				<span className="font-bold text-sm">Category Wins</span>
+			</div>
+			<div className="flex flex-wrap gap-3 flex-1">
+				{cities.map((city, i) => (
+					<div
+						key={city.id}
+						className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm"
+						style={{
+							background: i === topIdx ? "rgba(250,204,21,0.1)" : "var(--color-surface)",
+							border: `1px solid ${i === topIdx ? "#facc15" : "var(--color-border)"}`,
+						}}
+					>
+						{i === topIdx && <span>🏆</span>}
+						<span className="font-semibold">{city.name}</span>
+						<span style={{ color: "var(--color-muted)" }}>
+							{wins[i]} / {totalRows}
+						</span>
+					</div>
+				))}
+			</div>
+			{winLabels[topIdx]?.length > 0 && (
+				<p className="text-xs w-full sm:w-auto shrink-0 max-w-xs" style={{ color: "var(--color-muted)" }}>
+					<span className="font-medium" style={{ color: "var(--color-text)" }}>{cities[topIdx]?.name}</span>
+					{" leads in: "}
+					{winLabels[topIdx].slice(0, 4).join(", ")}
+					{winLabels[topIdx].length > 4 && ` +${winLabels[topIdx].length - 4} more`}
+				</p>
+			)}
+		</div>
 	);
 }
 
