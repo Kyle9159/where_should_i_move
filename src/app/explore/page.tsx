@@ -130,6 +130,7 @@ function ExploreInner() {
 						<Link href="/map" className="text-xs flex items-center gap-0.5" style={{ color: "var(--color-muted)" }}><Map size={11} /> Map</Link>
 						<Link href="/surprise" className="text-xs" style={{ color: "var(--color-muted)" }}>✦ Surprise</Link>
 						<Link href="/compare" className="text-xs" style={{ color: "var(--color-muted)" }}>⚖️ Compare</Link>
+						<Link href="/tools/cost-of-living" className="text-xs" style={{ color: "var(--color-muted)" }}>💰 CoL Calc</Link>
 					</div>
 					<button
 						type="button"

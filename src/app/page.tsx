@@ -46,6 +46,9 @@ export default async function LandingPage() {
 					<Link href="/best" className="text-sm transition-colors hover:text-white hidden sm:inline" style={{ color: "var(--color-muted)" }}>
 						Best Cities
 					</Link>
+					<Link href="/tools/cost-of-living" className="text-sm transition-colors hover:text-white hidden sm:inline" style={{ color: "var(--color-muted)" }}>
+						CoL Calculator
+					</Link>
 					<Link href="/surprise" className="text-sm transition-colors hover:text-white hidden sm:inline" style={{ color: "var(--color-muted)" }}>
 						Surprise Me
 					</Link>
