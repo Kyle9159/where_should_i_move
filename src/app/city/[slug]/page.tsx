@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { ArrowLeft, MapPin, Users, Home, TrendingUp, Shield, GraduationCap, CloudSun, Footprints } from "lucide-react";
 import { db } from "@/db";
@@ -101,12 +102,18 @@ async function getNearbySuburbs(
 	lng: number,
 	stateId: string,
 ): Promise<NearbySuburb[]> {
+	// Pre-filter with a ~30-mile bounding box in SQL before haversine refinement in JS
+	// ~0.45° lat ≈ 31 miles; ~0.7° lng ≈ 35 miles at 30°N, more conservative
 	const candidates = await db.query.cities.findMany({
-		where: (c, { and, eq, ne, inArray }) =>
+		where: (c, { and, eq, ne, inArray, gte, lte }) =>
 			and(
 				eq(c.stateId, stateId),
 				ne(c.id, cityId),
 				inArray(c.tier, ["mid-size", "small-city", "town"]),
+				gte(c.lat, lat - 0.45),
+				lte(c.lat, lat + 0.45),
+				gte(c.lng, lng - 0.70),
+				lte(c.lng, lng + 0.70),
 			),
 		with: { filterScores: true },
 		columns: {
@@ -187,12 +194,18 @@ export default async function CityPage({ params }: Props) {
 			{/* Hero */}
 			<div
 				className="relative h-72 sm:h-96 flex items-end"
-				style={{
-					background: city.heroImageUrl
-						? `url(${city.heroImageUrl}) center/cover no-repeat`
-						: "linear-gradient(160deg, oklch(18% 0.06 220) 0%, oklch(10% 0.02 200) 100%)",
-				}}
+				style={city.heroImageUrl ? undefined : { background: "linear-gradient(160deg, oklch(18% 0.06 220) 0%, oklch(10% 0.02 200) 100%)" }}
 			>
+				{city.heroImageUrl && (
+					<Image
+						src={city.heroImageUrl}
+						alt={`${city.name}, ${city.stateId} cityscape`}
+						fill
+						className="object-cover"
+						priority
+						sizes="100vw"
+					/>
+				)}
 				{/* Overlay gradient */}
 				<div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 

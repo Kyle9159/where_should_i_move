@@ -4,6 +4,7 @@ import { useState, useCallback, Suspense, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import Image from "next/image";
 import { SlidersHorizontal, X, ChevronRight, ChevronDown, Share2, Check, Map } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { decodeWeights, encodeWeights, type FilterWeights } from "@/lib/ranking";
@@ -161,12 +162,13 @@ function ExploreInner() {
 											)
 										}
 										className={cn(
-											"text-xs py-1 rounded font-mono transition-colors",
+											"text-xs py-1.5 rounded font-mono transition-colors",
 											sel
 												? "text-black font-bold"
 												: "hover:bg-[var(--color-surface-2)]",
 										)}
 										style={sel ? { background: "var(--color-accent)", color: "#000" } : { color: "var(--color-muted)" }}
+										aria-pressed={sel}
 									>
 										{s.id}
 									</button>
@@ -327,7 +329,7 @@ function ExploreInner() {
 								style={{ background: "var(--color-surface-2)", color: "var(--color-foreground)" }}
 							>
 								{s}
-								<button type="button" onClick={() => setSelectedStates((p) => p.filter((x) => x !== s))}>
+								<button type="button" onClick={() => setSelectedStates((p) => p.filter((x) => x !== s))} aria-label={`Remove ${s} filter`}>
 									<X size={10} />
 								</button>
 							</span>
@@ -343,6 +345,7 @@ function ExploreInner() {
 									type="button"
 									onClick={() => setWeights({})}
 									title="Reset quiz results"
+									aria-label="Reset quiz results"
 									className="hover:opacity-70 transition-opacity"
 								>
 									<X size={11} />
@@ -359,6 +362,7 @@ function ExploreInner() {
 									<button
 										type="button"
 										onClick={() => setWeights((p) => { const n = { ...p }; delete n[key as keyof FilterWeights]; return n; })}
+										aria-label={`Remove ${label} filter`}
 									>
 										<X size={10} />
 									</button>
@@ -468,6 +472,10 @@ function ExploreInner() {
 				<div
 					className="fixed inset-0 z-30 bg-black/50 lg:hidden"
 					onClick={() => setSidebarOpen(false)}
+					onKeyDown={(e) => e.key === "Enter" && setSidebarOpen(false)}
+					role="button"
+					tabIndex={0}
+					aria-label="Close sidebar"
 				/>
 			)}
 
@@ -486,14 +494,21 @@ function CityCard({ city }: { city: CityResult }) {
 			<Link href={`/city/${city.slug}`}>
 				<div
 					className="h-40 relative flex items-end p-4"
-					style={{
-						background: city.heroImageUrl
-							? `linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.65)), url(${city.heroImageUrl}) center/cover no-repeat`
-							: "linear-gradient(135deg, oklch(20% 0.05 220), oklch(14% 0.02 200))",
-					}}
+					style={city.heroImageUrl ? undefined : { background: "linear-gradient(135deg, oklch(20% 0.05 220), oklch(14% 0.02 200))" }}
 				>
-					<MatchScoreBadge score={city.matchPct} size="md" className="absolute top-3 right-3" />
-					<div>
+					{city.heroImageUrl && (
+						<Image
+							src={city.heroImageUrl}
+							alt={`${city.name}, ${city.stateId}`}
+							fill
+							className="object-cover"
+							sizes="(max-width: 640px) 100vw, 288px"
+						/>
+					)}
+					{/* Gradient overlay */}
+					<div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/65" />
+					<MatchScoreBadge score={city.matchPct} size="md" className="absolute top-3 right-3 z-10" />
+					<div className="relative z-10">
 						<p className="font-bold text-base leading-tight">{city.name}</p>
 						<p className="text-sm" style={{ color: "oklch(80% 0 0)" }}>
 							{city.stateId} · {CITY_TIERS[city.tier as keyof typeof CITY_TIERS]?.split(" ")[0] ?? city.tier}
@@ -537,18 +552,20 @@ function WeightSlider({
 	value: number;
 	onChange: (v: number) => void;
 }) {
+	const sliderId = `slider-${label.toLowerCase().replace(/\s+/g, "-")}`;
 	return (
 		<div className="space-y-1.5">
 			<div className="flex items-center justify-between">
-				<span className="text-xs flex items-center gap-1.5">
+				<label htmlFor={sliderId} className="text-xs flex items-center gap-1.5 cursor-pointer">
 					<span>{icon}</span>
 					<span style={{ color: "var(--color-foreground)" }}>{label}</span>
-				</span>
+				</label>
 				<span className="text-xs font-mono" style={{ color: "var(--color-accent)" }}>
 					{Math.round(value)}%
 				</span>
 			</div>
 			<input
+				id={sliderId}
 				type="range"
 				min={0}
 				max={30}

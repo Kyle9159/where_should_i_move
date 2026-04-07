@@ -181,6 +181,7 @@ export default function CostOfLivingPage() {
 							className="p-2 rounded-xl self-center sm:self-end mb-0.5 transition-colors hover:bg-white/5"
 							style={{ color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
 							title="Swap cities"
+							aria-label="Swap cities"
 						>
 							<ArrowLeftRight size={16} />
 						</button>
@@ -189,12 +190,13 @@ export default function CostOfLivingPage() {
 
 					{/* Salary */}
 					<div className="flex flex-col gap-2">
-						<label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-muted)" }}>
+						<label htmlFor="salary-input" className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-muted)" }}>
 							Current annual salary
 						</label>
 						<div className="relative">
 							<span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: "var(--color-muted)" }}>$</span>
 							<input
+								id="salary-input"
 								type="text"
 								inputMode="numeric"
 								value={salary}

@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowLeft, Plus, X, Trophy, Download, Lock, Bookmark, Check } from "lucide-react";
 import { useComparison } from "@/hooks/useComparison";
 import { formatCurrency, formatPct, scoreToColor } from "@/lib/utils";
@@ -351,14 +352,20 @@ function CompareTable({ cities }: { cities: CityDetail[] }) {
 								{/* Photo / hero */}
 								<div
 									className="h-28 relative flex items-end p-3"
-									style={{
-										background: city.heroImageUrl
-											? `linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.7)), url(${city.heroImageUrl}) center/cover`
-											: "linear-gradient(135deg, oklch(20% 0.05 220), oklch(14% 0.02 200))",
-									}}
+									style={city.heroImageUrl ? undefined : { background: "linear-gradient(135deg, oklch(20% 0.05 220), oklch(14% 0.02 200))" }}
 								>
-									<MatchScoreBadge score={Math.round(city.overallScore ?? 50)} size="sm" className="absolute top-2 right-2" />
-									<div>
+									{city.heroImageUrl && (
+										<Image
+											src={city.heroImageUrl}
+											alt={`${city.name}, ${city.stateId}`}
+											fill
+											className="object-cover"
+											sizes="256px"
+										/>
+									)}
+									<div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/70" />
+									<MatchScoreBadge score={Math.round(city.overallScore ?? 50)} size="sm" className="absolute top-2 right-2 z-10" />
+									<div className="relative z-10">
 										<p className="text-sm font-bold leading-tight">{city.name}</p>
 										<p className="text-xs" style={{ color: "oklch(75% 0 0)" }}>{city.stateId}</p>
 									</div>
@@ -369,8 +376,9 @@ function CompareTable({ cities }: { cities: CityDetail[] }) {
 											// Force page refresh if only 1 city left
 											if (cities.length <= 2) router.push("/explore");
 										}}
-										className="absolute top-2 left-2 w-5 h-5 rounded-full flex items-center justify-center"
+										className="absolute top-2 left-2 w-7 h-7 rounded-full flex items-center justify-center z-10"
 										style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+										aria-label={`Remove ${city.name} from comparison`}
 									>
 										<X size={10} />
 									</button>
